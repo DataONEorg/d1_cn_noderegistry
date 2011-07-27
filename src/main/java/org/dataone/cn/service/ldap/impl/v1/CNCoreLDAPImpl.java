@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.dataone.cn.service.ldap.impl;
+package org.dataone.cn.service.ldap.impl.v1;
 
 import java.io.InputStream;
 import java.util.Date;
@@ -13,7 +13,7 @@ import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.service.cn.CNCore;
+import org.dataone.service.cn.v1.CNCore;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InsufficientResources;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -24,25 +24,25 @@ import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.exceptions.UnsupportedType;
-import org.dataone.service.types.Event;
-import org.dataone.service.types.Identifier;
-import org.dataone.service.types.Node;
-import org.dataone.service.types.NodeHealth;
-import org.dataone.service.types.NodeList;
-import org.dataone.service.types.NodeReference;
-import org.dataone.service.types.NodeState;
-import org.dataone.service.types.NodeType;
-import org.dataone.service.types.ObjectFormat;
-import org.dataone.service.types.ObjectFormatIdentifier;
-import org.dataone.service.types.ObjectFormatList;
-import org.dataone.service.types.Ping;
-import org.dataone.service.types.Schedule;
-import org.dataone.service.types.Services;
-import org.dataone.service.types.Session;
-import org.dataone.service.types.Status;
-import org.dataone.service.types.Synchronization;
-import org.dataone.service.types.SystemMetadata;
-import org.dataone.service.types.util.ServiceTypeUtil;
+import org.dataone.service.types.v1.Event;
+import org.dataone.service.types.v1.Identifier;
+import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v1.NodeHealth;
+import org.dataone.service.types.v1.NodeList;
+import org.dataone.service.types.v1.NodeReference;
+import org.dataone.service.types.v1.NodeState;
+import org.dataone.service.types.v1.NodeType;
+import org.dataone.service.types.v1.ObjectFormat;
+import org.dataone.service.types.v1.ObjectFormatIdentifier;
+import org.dataone.service.types.v1.ObjectFormatList;
+import org.dataone.service.types.v1.Ping;
+import org.dataone.service.types.v1.Schedule;
+import org.dataone.service.types.v1.Services;
+import org.dataone.service.types.v1.Session;
+import org.dataone.service.types.v1.Status;
+import org.dataone.service.types.v1.Synchronization;
+import org.dataone.service.types.v1.SystemMetadata;
+import org.dataone.service.util.DateTimeMarshaller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.ldap.core.AttributesMapper;
@@ -73,10 +73,6 @@ public class CNCoreLDAPImpl implements CNCore {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public org.dataone.service.types.Log getLogRecords(Session session, Date fromDate, Date toDate, Event event, Integer start, Integer count) throws InvalidToken, InvalidRequest, ServiceFailure, NotAuthorized, NotImplemented {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 
     @Override
     public NodeList listNodes() throws NotImplemented, ServiceFailure {
@@ -87,7 +83,7 @@ public class CNCoreLDAPImpl implements CNCore {
 
             String nodeIdentifier = node.getIdentifier().getValue();
             log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
-            List<org.dataone.service.types.Service> serviceList = this.getAllServices(nodeIdentifier);
+            List<org.dataone.service.types.v1.Service> serviceList = this.getAllServices(nodeIdentifier);
             if (!serviceList.isEmpty()) {
                 Services services = new Services();
                 services.setServiceList(serviceList);
@@ -122,6 +118,17 @@ public class CNCoreLDAPImpl implements CNCore {
      */
     private List<Node> getAllNodes() {
         return ldapTemplate.search("", "(objectClass=d1Node)", new NodeAttributesMapper());
+    }
+
+
+    @Override
+    public boolean hasReservation(Session session, Identifier pid) throws InvalidToken, ServiceFailure, NotFound, NotAuthorized, IdentifierNotUnique, NotImplemented, InvalidRequest {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public org.dataone.service.types.v1.Log getLogRecords(Session session, Date fromDate, Date toDate, Event event, Integer start, Integer count) throws InvalidToken, InvalidRequest, ServiceFailure, NotAuthorized, NotImplemented {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     /**
@@ -167,8 +174,8 @@ public class CNCoreLDAPImpl implements CNCore {
                     schedule.setYear((String) attrs.get("d1NodeSynSchdYear").get());
                     synchronization.setSchedule(schedule);
 
-                    synchronization.setLastHarvested(ServiceTypeUtil.deserializeDateToUTC((String) attrs.get("d1NodeLastHarvested").get()));
-                    synchronization.setLastCompleteHarvest(ServiceTypeUtil.deserializeDateToUTC((String) attrs.get("d1NodeLastCompleteHarvest").get()));
+                    synchronization.setLastHarvested(DateTimeMarshaller.deserializeDateToUTC((String) attrs.get("d1NodeLastHarvested").get()));
+                    synchronization.setLastCompleteHarvest(DateTimeMarshaller.deserializeDateToUTC((String) attrs.get("d1NodeLastCompleteHarvest").get()));
                     node.setSynchronization(synchronization);
                 }
                 // MN Node Health, check ping and status
@@ -181,12 +188,12 @@ public class CNCoreLDAPImpl implements CNCore {
 
                     Status status = new Status();
                     status.setSuccess(Boolean.valueOf((String) attrs.get("d1NodeStatusSuccess").get()));
-                    status.setDateChecked(ServiceTypeUtil.deserializeDateToUTC((String) attrs.get("d1NodeStatusDateChecked").get()));
+                    status.setDateChecked(DateTimeMarshaller.deserializeDateToUTC((String) attrs.get("d1NodeStatusDateChecked").get()));
                     nodeHealth.setStatus(status);
 
                     Ping ping = new Ping();
                     ping.setSuccess(Boolean.valueOf((String) attrs.get("d1NodePingSuccess").get()));
-                    ping.setLastSuccess(ServiceTypeUtil.deserializeDateToUTC((String) attrs.get("d1NodePingDateChecked").get()));
+                    ping.setLastSuccess(DateTimeMarshaller.deserializeDateToUTC((String) attrs.get("d1NodePingDateChecked").get()));
                     nodeHealth.setPing(ping);
 
                     node.setHealth(nodeHealth);
@@ -206,7 +213,7 @@ public class CNCoreLDAPImpl implements CNCore {
      *
      * @author rwaltz
      */
-    private List<org.dataone.service.types.Service> getAllServices(String nodeId) {
+    private List<org.dataone.service.types.v1.Service> getAllServices(String nodeId) {
         AndFilter filter = new AndFilter();
         filter.and(new EqualsFilter("objectclass", "d1NodeService"));
         filter.and(new EqualsFilter("d1NodeId", nodeId));
@@ -225,7 +232,7 @@ public class CNCoreLDAPImpl implements CNCore {
 
         @Override
         public Object mapFromAttributes(Attributes attrs) throws NamingException {
-            org.dataone.service.types.Service service = new org.dataone.service.types.Service();
+            org.dataone.service.types.v1.Service service = new org.dataone.service.types.v1.Service();
             service.setName((String) attrs.get("d1NodeServiceName").get());
             service.setVersion((String) attrs.get("d1NodeServiceVersion").get());
             service.setAvailable(Boolean.valueOf((String) attrs.get("d1NodeServiceAvailable").get()));

@@ -43,6 +43,6 @@
        <!-- <qualifier value="ldapTemplate"/> -->
     </bean>
     <context:annotation-config/>
-    <context:component-scan base-package="org.dataone.cn.service.ldap.impl"  />
+    <context:component-scan base-package="org.dataone.cn.service.ldap.impl.v1"  />
 
 </beans>

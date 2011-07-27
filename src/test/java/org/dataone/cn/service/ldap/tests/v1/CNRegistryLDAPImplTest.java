@@ -1,6 +1,7 @@
-package org.dataone.cn.service.ldap.tests;
+package org.dataone.cn.service.ldap.tests.v1;
 
 
+import org.dataone.service.util.TypeMarshaller;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -10,23 +11,23 @@ import javax.annotation.Resource;
 import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.cn.batch.utils.TypeMarshaller;
-import org.dataone.cn.service.ldap.impl.CNRegisterLDAPImpl;
-import org.dataone.service.cn.CNCore;
+
+import org.dataone.cn.service.ldap.impl.v1.CNRegisterLDAPImpl;
+import org.dataone.service.cn.v1.CNCore;
 
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
-import org.dataone.service.types.Node;
-import org.dataone.service.types.NodeList;
-import org.dataone.service.types.NodeReference;
-import org.dataone.service.types.NodeType;
-import org.dataone.service.types.Schedule;
-import org.dataone.service.types.Service;
-import org.dataone.service.types.Services;
-import org.dataone.service.types.Synchronization;
+import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v1.NodeList;
+import org.dataone.service.types.v1.NodeReference;
+import org.dataone.service.types.v1.NodeType;
+import org.dataone.service.types.v1.Schedule;
+import org.dataone.service.types.v1.Service;
+import org.dataone.service.types.v1.Services;
+import org.dataone.service.types.v1.Synchronization;
 import org.jibx.runtime.JiBXException;
 
 import org.junit.Test;
@@ -130,7 +131,7 @@ public class CNRegistryLDAPImplTest {
     }
 
     @Test
-    public void testNodeList() throws NotImplemented, ServiceFailure, JiBXException, IOException {
+    public void testNodeList() throws NotImplemented, ServiceFailure, IOException, JiBXException {
         // retrieve it
         NodeList nodeList = cnLdapCore.listNodes();
         Assert.assertNotNull(nodeList);

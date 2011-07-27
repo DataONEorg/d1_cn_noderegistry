@@ -1,4 +1,4 @@
-package org.dataone.cn.service.ldap.impl;
+package org.dataone.cn.service.ldap.impl.v1;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -6,22 +6,22 @@ import java.util.List;
 import javax.naming.directory.Attributes;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.service.cn.CNRegister;
+import org.dataone.service.cn.v1.CNRegister;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotAuthorized;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
-import org.dataone.service.types.Node;
-import org.dataone.service.types.NodeReference;
-import org.dataone.service.types.Session;
+import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v1.NodeReference;
+import org.dataone.service.types.v1.Session;
 import org.springframework.ldap.core.AttributesMapper;
 import org.springframework.ldap.core.DirContextAdapter;
 import org.springframework.ldap.core.DistinguishedName;
 import javax.naming.NamingException;
-import org.dataone.service.types.NodeState;
-import org.dataone.service.types.NodeType;
+import org.dataone.service.types.v1.NodeState;
+import org.dataone.service.types.v1.NodeType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.ldap.core.DirContextOperations;
@@ -105,7 +105,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
         mapNodeToContext(node, context);
         ldapTemplate.bind(dn, context, null);
         if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
-            for (org.dataone.service.types.Service service : node.getServices().getServiceList()) {
+            for (org.dataone.service.types.v1.Service service : node.getServices().getServiceList()) {
                 String d1NodeServiceId = service.getName() + "-" + service.getVersion();
                 DistinguishedName dnService = new DistinguishedName();
                 dnService.add("d1NodeId", newNodeId);
@@ -145,7 +145,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
         }
     }
 
-    protected void mapServiceToContext(org.dataone.service.types.Service service, String nodeId, String nodeServiceId, DirContextOperations context) {
+    protected void mapServiceToContext(org.dataone.service.types.v1.Service service, String nodeId, String nodeServiceId, DirContextOperations context) {
         context.setAttributeValue("objectclass", "d1NodeService");
         context.setAttributeValue("d1NodeServiceId", nodeServiceId);
         context.setAttributeValue("d1NodeId", nodeId);
@@ -164,7 +164,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
         context.setAttributeValue("d1NodeBaseURL", node.getBaseURL());
         context.setAttributeValue("d1NodeReplicate", Boolean.toString(node.isReplicate()).toUpperCase());
         context.setAttributeValue("d1NodeSynchronize", Boolean.toString(node.isSynchronize()).toUpperCase());
-        context.setAttributeValue("d1NodeType", node.getType().toString());
+        context.setAttributeValue("d1NodeType", node.getType().xmlValue());
 
         // Any other attributes are membernode only attributes
 
@@ -189,7 +189,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
             // the node does not have a status
             if (node.getHealth() == null) {
 
-                context.setAttributeValue("d1NodeState", NodeState.UP.toString());
+                context.setAttributeValue("d1NodeState", NodeState.UP.xmlValue());
                 context.setAttributeValue("d1NodeStatusSuccess", "TRUE");
                 context.setAttributeValue("d1NodeStatusDateChecked", "1900-01-01T00:00:00Z");
                 context.setAttributeValue("d1NodePingSuccess", "TRUE");
@@ -197,7 +197,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
 
 
             } else {
-                context.setAttributeValue("d1NodeState", node.getHealth().getState().toString());
+                context.setAttributeValue("d1NodeState", node.getHealth().getState().xmlValue());
 
                 context.setAttributeValue("d1NodeStatusSuccess", Boolean.toString(node.getHealth().getStatus().getSuccess()));
                 context.setAttributeValue("d1NodeStatusDateChecked", "1900-01-01T00:00:00Z");
@@ -234,7 +234,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
         ldapTemplate.unbind(dn);
     }
 
-    public void deleteNodeService(Node node, org.dataone.service.types.Service service) {
+    public void deleteNodeService(Node node, org.dataone.service.types.v1.Service service) {
         String d1NodeServiceId = service.getName() + "-" + service.getVersion();
         DistinguishedName dn = new DistinguishedName();
         dn.add("d1NodeId", node.getIdentifier().getValue());
