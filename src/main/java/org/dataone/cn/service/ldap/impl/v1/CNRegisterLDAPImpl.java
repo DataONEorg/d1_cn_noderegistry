@@ -95,7 +95,9 @@ public class CNRegisterLDAPImpl implements CNRegister {
 
         // because we use a base DN, only need to supply the RDN
         DistinguishedName dn = new DistinguishedName();
+        dn.add("dc","dataone");
         dn.add("d1NodeId", newNodeId);
+
 
         NodeReference newNodeReference = new NodeReference();
         newNodeReference.setValue(newNodeId);
@@ -108,6 +110,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
             for (org.dataone.service.types.v1.Service service : node.getServices().getServiceList()) {
                 String d1NodeServiceId = service.getName() + "-" + service.getVersion();
                 DistinguishedName dnService = new DistinguishedName();
+                dnService.add("dc","dataone");
                 dnService.add("d1NodeId", newNodeId);
                 dnService.add("d1NodeServiceId", d1NodeServiceId);
                 context = new DirContextAdapter(dnService);
@@ -229,6 +232,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
 
     public void deleteNode(Node node) {
         DistinguishedName dn = new DistinguishedName();
+        dn.add("dc","dataone");
         dn.add("d1NodeId", node.getIdentifier().getValue());
         log.info("deleting : " + dn.toString());
         ldapTemplate.unbind(dn);
@@ -237,6 +241,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
     public void deleteNodeService(Node node, org.dataone.service.types.v1.Service service) {
         String d1NodeServiceId = service.getName() + "-" + service.getVersion();
         DistinguishedName dn = new DistinguishedName();
+        dn.add("dc","dataone");
         dn.add("d1NodeId", node.getIdentifier().getValue());
         dn.add("d1NodeServiceId", d1NodeServiceId);
         log.info("deleting : " + dn.toString());
