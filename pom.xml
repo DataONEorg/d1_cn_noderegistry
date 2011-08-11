@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.dataone</groupId>
 	<artifactId>d1_cn_noderegistry</artifactId>
-	<version>0.6.3-SNAPSHOT</version>
+	<version>0.6.4-SNAPSHOT</version>
 	<name>DataONE_Cn_Node_Registry</name>
 	<url>http://dataone.org</url>
      <properties>
@@ -79,7 +79,7 @@
 		<dependency>
 			<groupId>org.dataone</groupId>
 			<artifactId>d1_common_java</artifactId>
-			<version>0.6.3-SNAPSHOT</version>
+			<version>0.6.4-SNAPSHOT</version>
 			<type>jar</type>
 		</dependency>
 	</dependencies>
