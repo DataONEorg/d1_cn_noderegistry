@@ -1,6 +1,7 @@
 package org.dataone.cn.service.ldap.tests.v1;
 
 
+import org.dataone.cn.service.ldap.impl.v1.CNCoreLDAPImpl;
 import org.dataone.service.util.TypeMarshaller;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,12 +40,11 @@ import static org.junit.Assert.*;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations={"classpath:org/dataone/cn/service/ldap/tests/config/applicationContext.xml"})
 public class CNRegistryLDAPImplTest {
-    static final String datatypeSchemaTagUrl = "https://repository.dataone.org/software/cicore/tags/D1_SCHEMA_0_6_2/dataoneTypes.xsd";
-    
+
     public static Log log = LogFactory.getLog(CNRegistryLDAPImplTest.class);
     CNCore cnLdapCore;
     CNRegisterLDAPImpl cnLdapRegister;
-    
+    CNCoreLDAPImpl cnCoreLDAPImpl;
     /**
      * pull in the CnCore implementation to test against
      * @author rwaltz
@@ -52,6 +52,14 @@ public class CNRegistryLDAPImplTest {
     @Resource
     public void setCNCore(CNCore cnLdapCore) {
         this.cnLdapCore = cnLdapCore;
+    }
+    /**
+     * pull in the CnCore implementation to test against
+     * @author rwaltz
+     */
+    @Resource
+    public void setCNCoreLDAP(CNCoreLDAPImpl cnCoreLDAPImpl) {
+        this.cnCoreLDAPImpl = cnCoreLDAPImpl;
     }
     /**
      *  pull in the CnRegister implementation to test against
@@ -120,6 +128,13 @@ public class CNRegistryLDAPImplTest {
         testNodeList.add(testMNNode);
         log.info("created " + testNodeList.size() + " nodes");
 
+        // try to retrieve the node again
+
+        Node testRetrieval = cnCoreLDAPImpl.getNode(cnNodeReference.getValue());
+
+        assertTrue(testRetrieval.getIdentifier().getValue().equalsIgnoreCase(cnNodeReference.getValue()));
+
+        
         for (Node node : testNodeList) {
             if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
                 for (Service service: node.getServices().getServiceList()) {

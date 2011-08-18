@@ -58,6 +58,7 @@ import org.springframework.stereotype.Service;
 @Service("cnCoreLDAPImpl")
 @Qualifier("cnCoreLDAP")
 public class CNCoreLDAPImpl implements CNCore {
+
     @Autowired
     @Qualifier("ldapTemplate")
     private LdapTemplate ldapTemplate;
@@ -73,6 +74,22 @@ public class CNCoreLDAPImpl implements CNCore {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public Node getNode(String nodeIdentifier) throws NotImplemented, ServiceFailure {
+        NodeList nodeList = new NodeList();
+        String dnNodeIdentifier = "d1NodeId=" + nodeIdentifier + ",dc=dataone";
+        Node node = this.findNode(dnNodeIdentifier);
+
+
+        log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
+        List<org.dataone.service.types.v1.Service> serviceList = this.getAllServices(nodeIdentifier);
+        if (!serviceList.isEmpty()) {
+            Services services = new Services();
+            services.setServiceList(serviceList);
+            node.setServices(services);
+        }
+
+        return node;
+    }
 
     @Override
     public NodeList listNodes() throws NotImplemented, ServiceFailure {
@@ -94,7 +111,6 @@ public class CNCoreLDAPImpl implements CNCore {
         return nodeList;
     }
 
-
     @Override
     public Identifier create(Session session, Identifier pid, InputStream object, SystemMetadata sysmeta) throws InvalidToken, ServiceFailure, NotAuthorized, IdentifierNotUnique, UnsupportedType, InsufficientResources, InvalidSystemMetadata, NotImplemented, InvalidRequest {
         throw new UnsupportedOperationException("Not supported yet.");
@@ -107,6 +123,17 @@ public class CNCoreLDAPImpl implements CNCore {
 
     /**
      * calls the Spring ldapTemplate search method to map
+     * objectClass d1Node to dataone Node object
+     * and return one of them in order to compose a Node object
+     *
+     * @author rwaltz
+     */
+    private Node findNode(String dn) {
+        return (Node) ldapTemplate.lookup(dn, new NodeAttributesMapper());
+    }
+
+    /**
+     * calls the Spring ldapTemplate search method to map
      * objectClass d1Nodes to dataone Node objects
      * and return a list of them in order to compose a NodeList object
      *
@@ -115,7 +142,6 @@ public class CNCoreLDAPImpl implements CNCore {
     private List<Node> getAllNodes() {
         return ldapTemplate.search("", "(objectClass=d1Node)", new NodeAttributesMapper());
     }
-
 
     @Override
     public boolean hasReservation(Session session, Identifier pid) throws InvalidToken, ServiceFailure, NotFound, NotAuthorized, IdentifierNotUnique, NotImplemented, InvalidRequest {
