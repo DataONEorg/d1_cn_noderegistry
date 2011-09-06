@@ -168,7 +168,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
         context.setAttributeValue("d1NodeReplicate", Boolean.toString(node.isReplicate()).toUpperCase());
         context.setAttributeValue("d1NodeSynchronize", Boolean.toString(node.isSynchronize()).toUpperCase());
         context.setAttributeValue("d1NodeType", node.getType().xmlValue());
-
+        context.setAttributeValue("d1NodeState", node.getState().xmlValue());
         // Any other attributes are membernode only attributes
 
         // synchronization schedules and status reports are only for MNs
@@ -187,26 +187,7 @@ public class CNRegisterLDAPImpl implements CNRegister {
                 context.setAttributeValue("d1NodeLastCompleteHarvest", "1900-01-01T00:00:00Z");
 
             }
-            // MN Node Health, check ping and status
-            // My assumption is if d1NodeState does not exist, then
-            // the node does not have a status
-            if (node.getHealth() == null) {
 
-                context.setAttributeValue("d1NodeState", NodeState.UP.xmlValue());
-                context.setAttributeValue("d1NodeStatusSuccess", "TRUE");
-                context.setAttributeValue("d1NodeStatusDateChecked", "1900-01-01T00:00:00Z");
-                context.setAttributeValue("d1NodePingSuccess", "TRUE");
-                context.setAttributeValue("d1NodePingDateChecked", "1900-01-01T00:00:00Z");
-
-
-            } else {
-                context.setAttributeValue("d1NodeState", node.getHealth().getState().xmlValue());
-
-                context.setAttributeValue("d1NodeStatusSuccess", Boolean.toString(node.getHealth().getStatus().getSuccess()));
-                context.setAttributeValue("d1NodeStatusDateChecked", "1900-01-01T00:00:00Z");
-                context.setAttributeValue("d1NodePingSuccess", Boolean.toString(node.getHealth().getPing().getSuccess()));
-                context.setAttributeValue("d1NodePingDateChecked", "1900-01-01T00:00:00Z");
-            }
         }
     }
 

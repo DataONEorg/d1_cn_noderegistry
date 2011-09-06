@@ -24,6 +24,7 @@ import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeList;
 import org.dataone.service.types.v1.NodeReference;
+import org.dataone.service.types.v1.NodeState;
 import org.dataone.service.types.v1.NodeType;
 import org.dataone.service.types.v1.Schedule;
 import org.dataone.service.types.v1.Service;
@@ -80,6 +81,7 @@ public class CNRegistryLDAPImplTest {
         testCNNode.setReplicate(false);
         testCNNode.setSynchronize(false);
         testCNNode.setType(NodeType.CN);
+        testCNNode.setState(NodeState.UP);
         NodeReference cnNodeReference = cnLdapRegister.register(null, testCNNode);
         assertNotNull(cnNodeReference);
         testNodeList.add(testCNNode);
@@ -91,7 +93,7 @@ public class CNRegistryLDAPImplTest {
         testMNNode.setReplicate(true);
         testMNNode.setSynchronize(true);
         testMNNode.setType(NodeType.MN);
-
+        testMNNode.setState(NodeState.UP);
         Synchronization synchronization = new Synchronization();
 
         synchronization.setLastCompleteHarvest(new Date());

@@ -27,7 +27,6 @@ import org.dataone.service.exceptions.UnsupportedType;
 import org.dataone.service.types.v1.Event;
 import org.dataone.service.types.v1.Identifier;
 import org.dataone.service.types.v1.Node;
-import org.dataone.service.types.v1.NodeHealth;
 import org.dataone.service.types.v1.NodeList;
 import org.dataone.service.types.v1.NodeReference;
 import org.dataone.service.types.v1.NodeState;
@@ -39,7 +38,6 @@ import org.dataone.service.types.v1.Ping;
 import org.dataone.service.types.v1.Schedule;
 import org.dataone.service.types.v1.Services;
 import org.dataone.service.types.v1.Session;
-import org.dataone.service.types.v1.Status;
 import org.dataone.service.types.v1.Synchronization;
 import org.dataone.service.types.v1.SystemMetadata;
 import org.dataone.service.util.DateTimeMarshaller;
@@ -189,6 +187,7 @@ public class CNCoreLDAPImpl implements CNCore {
             node.setDescription((String) attrs.get("d1NodeDescription").get());
             node.setReplicate(Boolean.valueOf((String) attrs.get("d1NodeReplicate").get()));
             node.setSynchronize(Boolean.valueOf((String) attrs.get("d1NodeSynchronize").get()));
+            node.setState(NodeState.convert((String) attrs.get("d1NodeState").get()));
             node.setType(NodeType.convert((String) attrs.get("d1NodeType").get()));
 
             // Here begins the optional params
@@ -219,23 +218,15 @@ public class CNCoreLDAPImpl implements CNCore {
                 // My assumption is if d1NodeState does not exist, then
                 // the node does not have a status
                 Attribute d1NodeState = attrs.get("d1NodeState");
-                if ((d1NodeState != null) && (d1NodeState.get() != null)) {
-                    NodeHealth nodeHealth = new NodeHealth();
-                    nodeHealth.setState(NodeState.convert((String) d1NodeState.get()));
 
-                    Status status = new Status();
-                    status.setSuccess(Boolean.valueOf((String) attrs.get("d1NodeStatusSuccess").get()));
-                    status.setDateChecked(DateTimeMarshaller.deserializeDateToUTC((String) attrs.get("d1NodeStatusDateChecked").get()));
-                    nodeHealth.setStatus(status);
-
+                Attribute d1NodePingSuccess =  attrs.get("d1NodePingSuccess");
+                if ((d1NodePingSuccess != null) && (d1NodePingSuccess.get() != null)) {
                     Ping ping = new Ping();
                     ping.setSuccess(Boolean.valueOf((String) attrs.get("d1NodePingSuccess").get()));
                     ping.setLastSuccess(DateTimeMarshaller.deserializeDateToUTC((String) attrs.get("d1NodePingDateChecked").get()));
-                    nodeHealth.setPing(ping);
-
-                    node.setHealth(nodeHealth);
-
+                    node.setPing(ping);
                 }
+
             }
 
             return node;
