@@ -114,11 +114,6 @@ public class CNCoreLDAPImpl implements CNCore {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public boolean registerSystemMetadata(Session session, Identifier pid, SystemMetadata sysmeta) throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, InvalidSystemMetadata {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     /**
      * calls the Spring ldapTemplate search method to map
      * objectClass d1Node to dataone Node object
@@ -163,6 +158,11 @@ public class CNCoreLDAPImpl implements CNCore {
 
     @Override
     public boolean updateSystemMetadata(Session session, Identifier pid, SystemMetadata sysmeta) throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, InvalidSystemMetadata, NotFound {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Identifier registerSystemMetadata(Session session, Identifier pid, SystemMetadata sysmeta) throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, InvalidSystemMetadata {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

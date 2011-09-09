@@ -22,6 +22,7 @@ import org.springframework.ldap.core.DistinguishedName;
 import javax.naming.NamingException;
 import org.dataone.service.types.v1.NodeState;
 import org.dataone.service.types.v1.NodeType;
+import org.dataone.service.util.DateTimeMarshaller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.ldap.core.DirContextOperations;
@@ -56,7 +57,13 @@ public class CNRegisterLDAPImpl implements CNRegister {
     public boolean updateNodeCapabilities(Session session, NodeReference nodeid, Node node) throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, NotFound {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-
+    public void updateLastHarvested(String nodeId, Node node) {
+        DistinguishedName dn = new DistinguishedName();
+        dn.add("d1NodeId", nodeId);
+        DirContextOperations context = ldapTemplate.lookupContext(dn);
+        context.setAttributeValue("d1NodeLastHarvested", DateTimeMarshaller.serializeDateToUTC(node.getSynchronization().getLastHarvested()));
+        ldapTemplate.modifyAttributes(context);
+    }
     @Override
     public NodeReference register(Session session, Node node) throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, IdentifierNotUnique {
 
