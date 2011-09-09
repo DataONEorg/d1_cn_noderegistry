@@ -52,6 +52,10 @@ static Logger logger = Logger.getLogger(HazelcastLdapStoreTest.class);
          }
          IMap<String, Node> d1NodesMap = hazelcastInstance.getMap("d1NodesMap");
          logger.info("Node map has " + d1NodesMap.size() + " entries");
+         for (String key: d1NodesMap.keySet()) {
+             Node node = d1NodesMap.get(key);
+             logger.info("found node with id: " +key + " and url " + node.getBaseURL());
+         }
     }
 
 
