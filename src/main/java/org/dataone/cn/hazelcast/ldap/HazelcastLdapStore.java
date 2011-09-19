@@ -14,38 +14,33 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.cn.service.ldap.impl.v1.CNCoreLDAPImpl;
-import org.dataone.cn.service.ldap.impl.v1.CNRegisterLDAPImpl;
+import org.dataone.service.cn.impl.v1.NodeRegistryService;
+import org.dataone.service.exceptions.NotFound;
+
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeList;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
+
 
 /**
  * Provide read and write access to the nodelist stored in LDAP
  * @author waltz
  */
-@Service
-@Qualifier("hazelcastLdapStore")
+
 public class HazelcastLdapStore implements MapLoader, MapStore {
 
     public static Log log = LogFactory.getLog(HazelcastLdapStore.class);
-    @Autowired
-    @Qualifier("cnCoreLDAPImpl")
-    private CNCoreLDAPImpl cnCoreLDAPImpl;
-    
-    @Autowired
-    @Qualifier("cnRegisterLDAPImpl")
-    private CNRegisterLDAPImpl cnRegisterLDAPImpl;
+
+    private static NodeRegistryService nodeRegistry = new NodeRegistryService();
 
     @Override
     public Object load(Object key) {
         Node node = null;
-        try {
-            node = cnCoreLDAPImpl.getNode((String) key);
+            try {
+                node = nodeRegistry.getNode((String) key);
+            } catch (NotFound ex) {
+                log.error(ex.serialize(NotImplemented.FMT_XML));
         } catch (NotImplemented ex) {
             log.error(ex.serialize(NotImplemented.FMT_XML));
         } catch (ServiceFailure ex) {
@@ -59,7 +54,7 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
         // Interpret loadAll as a way to get allNode again?
         NodeList nodeList = null;
         try {
-            nodeList = cnCoreLDAPImpl.listNodes();
+            nodeList = nodeRegistry.listNodes();
         } catch (NotImplemented ex) {
             log.error(ex.serialize(NotImplemented.FMT_XML));
         } catch (ServiceFailure ex) {
@@ -79,7 +74,7 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
         // a map is called, loadAllKeys will be called.
         NodeList nodeList = null;
         try {
-            nodeList = cnCoreLDAPImpl.listNodes();
+            nodeList = nodeRegistry.listNodes();
         } catch (NotImplemented ex) {
             log.error(ex.serialize(NotImplemented.FMT_XML));
         } catch (ServiceFailure ex) {
@@ -95,13 +90,21 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
 
     @Override
     public void store(Object key, Object value) {
-        cnRegisterLDAPImpl.updateLastHarvested((String) key, (Node) value);
+        try {
+            nodeRegistry.updateLastHarvested((String) key, (Node) value);
+        } catch (ServiceFailure ex) {
+           log.error(ex.serialize(NotImplemented.FMT_XML));
+        }
     }
 
     @Override
     public void storeAll(Map map) {
+                try {
         for (Object key : map.keySet()) {
-            cnRegisterLDAPImpl.updateLastHarvested((String) key, (Node) map.get(key));
+            nodeRegistry.updateLastHarvested((String) key, (Node) map.get(key));
+        }
+       } catch (ServiceFailure ex) {
+           log.error(ex.serialize(NotImplemented.FMT_XML));
         }
     }
 
