@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- Apache Commons Configuration -->
 <configuration>
+        <properties fileName="ldapService.properties"/>
 	<properties fileName="registryLdap.properties"/>
 </configuration>
