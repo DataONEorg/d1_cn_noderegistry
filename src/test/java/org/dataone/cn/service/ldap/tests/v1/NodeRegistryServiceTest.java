@@ -34,10 +34,6 @@ public class NodeRegistryServiceTest {
     public static Log log = LogFactory.getLog(NodeRegistryServiceTest.class);
     NodeRegistryService nodeRegistryService = new NodeRegistryService();
 
-    public NodeRegistryServiceTest() {
-        org.apache.log4j.BasicConfigurator.configure();
-    }
-
     @Test
     public void testRegisterAndDeleteNode() throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, IdentifierNotUnique, NotFound {
         List<Node> testNodeList = new ArrayList<Node>();
