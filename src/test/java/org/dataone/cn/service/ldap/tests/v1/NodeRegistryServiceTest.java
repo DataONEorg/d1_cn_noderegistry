@@ -38,6 +38,9 @@ public class NodeRegistryServiceTest {
     public void testRegisterAndDeleteNode() throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, IdentifierNotUnique, NotFound {
         List<Node> testNodeList = new ArrayList<Node>();
         Node testCNNode = new Node();
+        NodeReference nodeId = new NodeReference();
+        nodeId.setValue("test-1");
+        testCNNode.setIdentifier(nodeId);
         testCNNode.setName("testThisCN");
         testCNNode.setDescription("this is a test");
         testCNNode.setBaseURL("https://test.this.stuff/cn");
@@ -50,6 +53,9 @@ public class NodeRegistryServiceTest {
         testNodeList.add(testCNNode);
 
         Node testMNNode = new Node();
+        NodeReference mnodeId = new NodeReference();
+        mnodeId.setValue("test-2");
+        testMNNode.setIdentifier(mnodeId);
         testMNNode.setName("testThisMN");
         testMNNode.setDescription("this is a test");
         testMNNode.setBaseURL("https://test.this.stuff/mn");

@@ -380,7 +380,10 @@ public class NodeRegistryService extends LDAPService {
             // As a note, DataONE has some reserved Ids like c1d1 that will
             // add to node list, and the generator will never get into infinite loop
             //
-            int randomGenArrayLength = 4;
+
+
+            // COMMENTED OUT FOR Santa Barbara meeting 09/29
+/*            int randomGenArrayLength = 4;
             if (nodeIds.size() >= 160000) {
                 randomGenArrayLength = 6;
             } else if (nodeIds.size() >= 64000000) {
@@ -395,7 +398,15 @@ public class NodeRegistryService extends LDAPService {
             } while (nodeIds.contains(newNodeId));
             NodeReference newNodeReference = new NodeReference();
             newNodeReference.setValue(newNodeId);
-            node.setIdentifier(newNodeReference);
+            node.setIdentifier(newNodeReference); */
+
+            // REPLACES THE ABOVE LOGIC
+            String newNodeId = node.getIdentifier().getValue();
+            NodeReference newNodeReference = new NodeReference();
+            newNodeReference.setValue(newNodeId);
+            if (nodeIds.contains(newNodeId)) {
+                throw new IdentifierNotUnique("4844", "Sorry! Node Identifier " + newNodeId + " already exists ");
+            }
 
             String dnNodeIdentifier = buildNodeDN(node);
             Attributes nodeAttributes = buildNodeAttributes(node);
@@ -404,7 +415,7 @@ public class NodeRegistryService extends LDAPService {
             log.debug("Added Node entry " + dnNodeIdentifier);
 
             if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
-                for (org.dataone.service.types.v1.Service service : node.getServices().getServiceList()) {
+                for (Service service : node.getServices().getServiceList()) {
                     String serviceDN = buildNodeServiceDN(node, service);
                     Attributes serviceAttributes = buildNodeServiceAttributes(node, service);
                     ctx.createSubcontext(serviceDN, serviceAttributes);
@@ -412,7 +423,7 @@ public class NodeRegistryService extends LDAPService {
                 }
             }
             return newNodeReference;
-        } catch (NamingException ex) {
+        } catch (Exception ex) {
             log.error("Problem registering node " + node.getName(), ex);
             throw new ServiceFailure("4801", ex.getMessage());
         }
@@ -438,7 +449,7 @@ public class NodeRegistryService extends LDAPService {
         nodeAttributes.put(new BasicAttribute("d1NodeState", node.getState().xmlValue()));
         // Any other attributes are membernode only attributes
 
-        if (!node.getSubjectList().isEmpty()) {
+        if ((node.getSubjectList() != null) && (!node.getSubjectList().isEmpty())) {
             Attribute subjects = new BasicAttribute("subject");
             for (Subject subject : node.getSubjectList()) {
                 subjects.add(subject.getValue());
