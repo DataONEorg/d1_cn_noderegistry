@@ -35,7 +35,7 @@ public class NodeRegistryServiceTest {
     NodeRegistryService nodeRegistryService = new NodeRegistryService();
 
     @Test
-    public void testRegisterAndDeleteNode() throws NotImplemented, NotAuthorized, ServiceFailure, InvalidRequest, IdentifierNotUnique, NotFound {
+    public void testRegisterAndDeleteNode() throws Exception {
         List<Node> testNodeList = new ArrayList<Node>();
         Node testCNNode = new Node();
         NodeReference nodeId = new NodeReference();
@@ -101,18 +101,14 @@ public class NodeRegistryServiceTest {
 
         // try to retrieve the node again
 
-        Node testRetrieval = nodeRegistryService.getNode(cnNodeReference.getValue());
+        Node testRetrieval = nodeRegistryService.getNode(cnNodeReference);
 
         assertTrue(testRetrieval.getIdentifier().getValue().equalsIgnoreCase(cnNodeReference.getValue()));
 
 
         for (Node node : testNodeList) {
-            if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
-                for (Service service : node.getServices().getServiceList()) {
-                    nodeRegistryService.deleteNodeService(node, service);
-                }
-            }
-            nodeRegistryService.deleteNode(node);
+
+            nodeRegistryService.deleteNode(node.getIdentifier());
         }
     }
 

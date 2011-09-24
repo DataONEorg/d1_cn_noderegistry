@@ -5,8 +5,12 @@
 package org.dataone.service.cn.impl.v1;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -77,19 +81,22 @@ public class NodeRegistryService extends LDAPService {
         return nodeList;
     }
 
-    public Node getNode(String nodeIdentifier) throws NotImplemented, ServiceFailure, NotFound {
+    public Node getNode(NodeReference nodeIdentifier) throws ServiceFailure, NotFound {
 
-        String dnNodeIdentifier = "cn=" + nodeIdentifier + ",dc=dataone,dc=org";
-        Node node;
+        String dnNodeIdentifier = "cn=" + nodeIdentifier.getValue() + ",dc=dataone,dc=org";
+        Node node = null;
         try {
             node = this.findNode(dnNodeIdentifier);
+        } catch (NameNotFoundException ex) {
+            log.warn("Node not found: " + nodeIdentifier.getValue());
+            throw new NotFound("4842", ex.getMessage());
         } catch (NamingException ex) {
-            throw new ServiceFailure("4801", ex.getMessage());
+            throw new ServiceFailure("4842", ex.getMessage());
         }
 
 
         log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
-        List<Service> serviceList = this.getAllServices(nodeIdentifier);
+        List<Service> serviceList = this.getAllServices(nodeIdentifier.getValue());
         if (!serviceList.isEmpty()) {
             Services services = new Services();
             services.setServiceList(serviceList);
@@ -98,11 +105,96 @@ public class NodeRegistryService extends LDAPService {
 
         return node;
     }
+    
+    public NodeReference register(Node node) throws Exception {
+        try {
+            String dnNodeIdentifier = buildNodeDN(node.getIdentifier());
+            Attributes nodeAttributes = buildNodeAttributes(node);
+            DirContext ctx = getContext();
+            ctx.createSubcontext(dnNodeIdentifier, nodeAttributes);
+            log.debug("Added Node entry " + dnNodeIdentifier);
 
-    private Node findNode(String nodeDN) throws ServiceFailure, NotImplemented, NotFound, NamingException {
+            if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
+                for (Service service : node.getServices().getServiceList()) {
+                    String serviceDN = buildNodeServiceDN(node.getIdentifier(), service);
+                    Attributes serviceAttributes = buildNodeServiceAttributes(node, service);
+                    ctx.createSubcontext(serviceDN, serviceAttributes);
+                    log.debug("Added Node Service entry " + serviceDN);
+                }
+            }
+            return node.getIdentifier();
+        } catch (Exception ex) {
+            log.error("Problem registering node " + node.getName(), ex);
+            throw new ServiceFailure("4801", ex.getMessage());
+        }
+
+    }
+
+    public void updateLastHarvested(String nodeIdentifier, Date lastDateNodeHarvested) throws ServiceFailure {
+        try {
+            String dnNodeIdentifier = "cn=" + nodeIdentifier + ",dc=dataone,dc=org";
+            Attribute d1NodeLastHarvested = new BasicAttribute("d1NodeLastHarvested", DateTimeMarshaller.serializeDateToUTC(lastDateNodeHarvested));
+            // get a handle to an Initial DirContext
+            DirContext ctx = getContext();
+
+            // construct the list of modifications to make
+            ModificationItem[] mods = new ModificationItem[1];
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, d1NodeLastHarvested);
+
+            // make the change
+            ctx.modifyAttributes(dnNodeIdentifier, mods);
+            log.debug("Updated entry: " + dnNodeIdentifier);
+        } catch (Exception e) {
+            log.error("Problem updating lastHarvested for node " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could not update account: " + e.getMessage());
+        }
+    }
+
+    public NodeReference generateNodeIdentifier() throws ServiceFailure {
+            // this counting method is fine, but I believe
+            // it might become very inefficient
+            // once we get into the tens of thousands of nodes
+            List<String> nodeIds = getAllNodeIds();
+            // Generaate a unique Id that is not in current Node List
+            // Combinations of the basic generation method allows for
+            // 160K permutations of a string using at most 4 chars.
+            // however, we will allow up to 6 chars for a max of
+            // 64,000,000 but we do not expect ever to reach this max.
+            // and if we do, just alter the code to extend another 2 chars
+            // for a max of 25+ Billion, assuming there are datastructures
+            // that can manage that # of ids
+            //
+            // As a note, DataONE has some reserved Ids like c1d1 that will
+            // add to node list, and the generator will never get into infinite loop
+            //
+
+
+            // COMMENTED OUT FOR Santa Barbara meeting 09/29
+            int randomGenArrayLength = 4;
+            if (nodeIds.size() >= 160000) {
+                randomGenArrayLength = 6;
+            } else if (nodeIds.size() >= 64000000) {
+                // WoW 64 Million+ nodes?? we hit the jackpot!
+                throw new ServiceFailure("233", "Unable to allocate 64000001th Node Id");
+            }
+            String newNodeId = "";
+            // if we hit a duplicate we want to keep generating until a
+            // unique id is found
+            do {
+                newNodeId = NodeIdentifierGenerator.generateId(randomGenArrayLength);
+            } while (nodeIds.contains(newNodeId));
+            NodeReference newNodeReference = new NodeReference();
+            newNodeReference.setValue(newNodeId);
+
+            return newNodeReference;
+
+    }
+
+
+    private Node findNode(String nodeDN) throws NotFound, NamingException, NameNotFoundException {
 
         HashMap<String, NamingEnumeration> attributesMap = new HashMap<String, NamingEnumeration>();
-        try {
+
             DirContext ctx = getContext();
             Attributes attributes = ctx.getAttributes(nodeDN);
             NamingEnumeration<? extends Attribute> values = attributes.getAll();
@@ -115,11 +207,7 @@ public class NodeRegistryService extends LDAPService {
 
             }
             log.debug("Retrieved SubjectList for: " + nodeDN);
-        } catch (Exception e) {
-            String msg = "Problem looking up entry: " + nodeDN + " : " + e.getMessage();
-            log.error(msg, e);
-            throw new ServiceFailure("4801", msg);
-        }
+
         if (attributesMap.isEmpty()) {
             throw new NotFound("4801", nodeDN + " not found on the server");
         }
@@ -342,94 +430,6 @@ public class NodeRegistryService extends LDAPService {
         return service;
     }
 
-    public void updateLastHarvested(String nodeIdentifier, Node node) throws ServiceFailure {
-        try {
-            String dnNodeIdentifier = "cn=" + nodeIdentifier + ",dc=dataone,dc=org";
-            Attribute d1NodeLastHarvested = new BasicAttribute("d1NodeLastHarvested", DateTimeMarshaller.serializeDateToUTC(node.getSynchronization().getLastHarvested()));
-            // get a handle to an Initial DirContext
-            DirContext ctx = getContext();
-
-            // construct the list of modifications to make
-            ModificationItem[] mods = new ModificationItem[1];
-            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, d1NodeLastHarvested);
-
-            // make the change
-            ctx.modifyAttributes(dnNodeIdentifier, mods);
-            log.debug("Updated entry: " + dnNodeIdentifier);
-        } catch (Exception e) {
-            log.error("Problem updating lastHarvested for node " + node.getIdentifier().getValue(), e);
-            throw new ServiceFailure("4801", "Could not update account: " + e.getMessage());
-        }
-    }
-
-    public NodeReference register(Node node) throws NotImplemented, ServiceFailure, IdentifierNotUnique {
-        try {
-            // this counting method is fine, but I believe
-            // it might become very inefficient
-            // once we get into the tens of thousands of nodes
-            List<String> nodeIds = getAllNodeIds();
-            // Generaate a unique Id that is not in current Node List
-            // Combinations of the basic generation method allows for
-            // 160K permutations of a string using at most 4 chars.
-            // however, we will allow up to 6 chars for a max of
-            // 64,000,000 but we do not expect ever to reach this max.
-            // and if we do, just alter the code to extend another 2 chars
-            // for a max of 25+ Billion, assuming there are datastructures
-            // that can manage that # of ids
-            //
-            // As a note, DataONE has some reserved Ids like c1d1 that will
-            // add to node list, and the generator will never get into infinite loop
-            //
-
-
-            // COMMENTED OUT FOR Santa Barbara meeting 09/29
-/*            int randomGenArrayLength = 4;
-            if (nodeIds.size() >= 160000) {
-                randomGenArrayLength = 6;
-            } else if (nodeIds.size() >= 64000000) {
-                // WoW 64 Million+ nodes?? we hit the jackpot!
-                throw new ServiceFailure("233", "Unable to allocate 64000001th Node Id");
-            }
-            String newNodeId = "";
-            // if we hit a duplicate we want to keep generating until a
-            // unique id is found
-            do {
-                newNodeId = NodeIdentifierGenerator.generateId(randomGenArrayLength);
-            } while (nodeIds.contains(newNodeId));
-            NodeReference newNodeReference = new NodeReference();
-            newNodeReference.setValue(newNodeId);
-            node.setIdentifier(newNodeReference); */
-
-            // REPLACES THE ABOVE LOGIC
-            String newNodeId = node.getIdentifier().getValue();
-            NodeReference newNodeReference = new NodeReference();
-            newNodeReference.setValue(newNodeId);
-            if (nodeIds.contains(newNodeId)) {
-                throw new IdentifierNotUnique("4844", "Sorry! Node Identifier " + newNodeId + " already exists ");
-            }
-
-            String dnNodeIdentifier = buildNodeDN(node);
-            Attributes nodeAttributes = buildNodeAttributes(node);
-            DirContext ctx = getContext();
-            ctx.createSubcontext(dnNodeIdentifier, nodeAttributes);
-            log.debug("Added Node entry " + dnNodeIdentifier);
-
-            if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
-                for (Service service : node.getServices().getServiceList()) {
-                    String serviceDN = buildNodeServiceDN(node, service);
-                    Attributes serviceAttributes = buildNodeServiceAttributes(node, service);
-                    ctx.createSubcontext(serviceDN, serviceAttributes);
-                    log.debug("Added Node Service entry " + serviceDN);
-                }
-            }
-            return newNodeReference;
-        } catch (Exception ex) {
-            log.error("Problem registering node " + node.getName(), ex);
-            throw new ServiceFailure("4801", ex.getMessage());
-        }
-
-    }
-
     private Attributes buildNodeAttributes(Node node) {
         Attributes nodeAttributes = new BasicAttributes();
         Attribute objClasses = new BasicAttribute("objectclass");
@@ -488,23 +488,33 @@ public class NodeRegistryService extends LDAPService {
         return serviceAttributes;
     }
 
+
+    private String buildNodeServiceDN(NodeReference nodeReference, Service service) {
+        String d1NodeServiceId = service.getName() + "-" + service.getVersion();
+         String serviceDN = "d1NodeServiceId=" + d1NodeServiceId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
+         return serviceDN;
+    }
+    private String buildNodeDN(NodeReference nodeReference) {
+       return "cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
+    }
+
     public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    public Boolean deleteNode(Node node) {
-        return super.removeEntry(buildNodeDN(node));
+    public Boolean deleteNode(NodeReference nodeReference) throws ServiceFailure {
+
+        List<Service> services = getAllServices(nodeReference.getValue());
+        if ((services != null) && (services.size() > 0)) {
+            for (Service service : services) {
+                deleteNodeService(nodeReference, service);
+            }
+        }
+        return super.removeEntry(buildNodeDN(nodeReference));
+
     }
 
-    public Boolean deleteNodeService(Node node, Service service) {
+    public Boolean deleteNodeService(NodeReference nodeReference, Service service) {
 
-        return super.removeEntry(buildNodeServiceDN(node, service));
-    }
-    private String buildNodeServiceDN(Node node, Service service) {
-        String d1NodeServiceId = service.getName() + "-" + service.getVersion();
-         String serviceDN = "d1NodeServiceId=" + d1NodeServiceId + ",cn=" + node.getIdentifier().getValue() + ",dc=dataone,dc=org";
-         return serviceDN;
-    }
-    private String buildNodeDN(Node node) {
-       return "cn=" + node.getIdentifier().getValue() + ",dc=dataone,dc=org";
+        return super.removeEntry(buildNodeServiceDN(nodeReference, service));
     }
 }
