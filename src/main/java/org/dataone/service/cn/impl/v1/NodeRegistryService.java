@@ -130,9 +130,9 @@ public class NodeRegistryService extends LDAPService {
 
     }
 
-    public void updateLastHarvested(String nodeIdentifier, Date lastDateNodeHarvested) throws ServiceFailure {
+    public void updateLastHarvested(NodeReference nodeIdentifier, Date lastDateNodeHarvested) throws ServiceFailure {
         try {
-            String dnNodeIdentifier = "cn=" + nodeIdentifier + ",dc=dataone,dc=org";
+            String dnNodeIdentifier = "cn=" + nodeIdentifier.getValue() + ",dc=dataone,dc=org";
             Attribute d1NodeLastHarvested = new BasicAttribute("d1NodeLastHarvested", DateTimeMarshaller.serializeDateToUTC(lastDateNodeHarvested));
             // get a handle to an Initial DirContext
             DirContext ctx = getContext();
