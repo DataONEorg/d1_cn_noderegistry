@@ -27,4 +27,5 @@
         <lastCompleteHarvest>1900-01-01T00:00:00.000+00:00</lastCompleteHarvest>
     </synchronization>
     <subject>cn=test,dc=dataone,dc=org</subject>
+    <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>
 </d1:node>

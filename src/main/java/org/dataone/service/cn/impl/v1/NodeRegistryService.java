@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -149,6 +147,26 @@ public class NodeRegistryService extends LDAPService {
             throw new ServiceFailure("4801", "Could not update account: " + e.getMessage());
         }
     }
+    
+    public void approveNode(NodeReference nodeIdentifier) throws ServiceFailure {
+        try {
+            String dnNodeIdentifier = "cn=" + nodeIdentifier.getValue() + ",dc=dataone,dc=org";
+            Attribute d1NodeApproval = new BasicAttribute("d1NodeApproved", Boolean.toString(Boolean.TRUE).toUpperCase());
+            // get a handle to an Initial DirContext
+            DirContext ctx = getContext();
+
+            // construct the list of modifications to make
+            ModificationItem[] mods = new ModificationItem[1];
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, d1NodeApproval);
+
+            // make the change
+            ctx.modifyAttributes(dnNodeIdentifier, mods);
+            log.debug("Approved Node: " + dnNodeIdentifier);
+        } catch (Exception e) {
+            log.error("Problem approving node " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
+        }
+    }
 
     public NodeReference generateNodeIdentifier() throws ServiceFailure {
             // this counting method is fine, but I believe
@@ -228,7 +246,7 @@ public class NodeRegistryService extends LDAPService {
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             log.info("BASE: " + base);
             NamingEnumeration<SearchResult> results =
-                    ctx.search(this.base, "(objectClass=d1Node)", ctls);
+                    ctx.search(this.base, "(&(objectClass=d1Node)(d1NodeApproved=TRUE))", ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -270,7 +288,7 @@ public class NodeRegistryService extends LDAPService {
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
             NamingEnumeration<SearchResult> results =
-                    ctx.search(base, "(objectClass=d1Node)", ctls);
+                    ctx.search(base, "(&(objectClass=d1Node)(d1NodeApproved=TRUE))", ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -327,7 +345,14 @@ public class NodeRegistryService extends LDAPService {
                 node.addSubject(nodeSubject);
             }
         }
-
+        if (attributesMap.containsKey("d1NodeContactSubject")) {
+            NamingEnumeration contactSubjects = attributesMap.get("d1NodeContactSubject");
+            while (contactSubjects.hasMore()) {
+                Subject nodeContactSubject = new Subject();
+                nodeContactSubject.setValue((String) contactSubjects.next());
+                node.addContactSubject(nodeContactSubject);
+            }
+        }
         if (attributesMap.containsKey("d1nodereplicate")) {
             node.setReplicate(Boolean.valueOf(getEnumerationValueString(attributesMap.get("d1nodereplicate"))));
         }
@@ -447,6 +472,7 @@ public class NodeRegistryService extends LDAPService {
         nodeAttributes.put(new BasicAttribute("d1NodeSynchronize", Boolean.toString(node.isSynchronize()).toUpperCase()));
         nodeAttributes.put(new BasicAttribute("d1NodeType", node.getType().xmlValue()));
         nodeAttributes.put(new BasicAttribute("d1NodeState", node.getState().xmlValue()));
+        nodeAttributes.put(new BasicAttribute("d1NodeApproved", Boolean.toString(Boolean.FALSE).toUpperCase()));
         // Any other attributes are membernode only attributes
 
         if ((node.getSubjectList() != null) && (!node.getSubjectList().isEmpty())) {
@@ -456,7 +482,16 @@ public class NodeRegistryService extends LDAPService {
             }
             nodeAttributes.put(subjects);
         }
-
+        if ((node.getContactSubjectList() != null) && (!node.getContactSubjectList().isEmpty())) {
+            Attribute contactSubjects = new BasicAttribute("d1NodeContactSubject");
+            for (Subject contactSubject : node.getContactSubjectList()) {
+                contactSubjects.add(contactSubject.getValue());
+            }
+            nodeAttributes.put(contactSubjects);
+        } else {
+            // throw an exception
+            throw new NullPointerException("ContactSubjectList may not be null or empty");
+        }
         // synchronization schedules and status reports are only for MNs
         if (node.getType().compareTo(NodeType.MN) == 0) {
             // If there is  synchronization
