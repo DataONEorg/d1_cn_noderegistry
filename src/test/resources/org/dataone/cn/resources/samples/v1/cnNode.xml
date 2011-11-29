@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Document   : mnNode.xml
+    Created on : September 20, 2011, 3:42 PM
+    Author     : waltz
+    Description:
+        Purpose of the document follows.
+-->
+<d1:node xmlns:d1="http://ns.dataone.org/service/types/v1"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        replicate="false" synchronize="false" type="cn" state="up">
+    <identifier>testcn</identifier>
+    <name>localhost-cntest-1</name>
+    <description>Nowhere Test Member node</description>
+    <baseURL>https://nowhere.com/cn</baseURL>
+    <services>
+        <service name="CNCore" version="v1" available="true"/>
+        <service name="CNRead" version="v1" available="true"/>
+        <service name="CNAuthorization" version="v1" available="true"/>
+        <service name="CNRegister" version="v1" available="true"/>
+        <service name="CNReplication" version="v1" available="false">
+            <restriction methodName="setReplicationPolicy">
+                <allowed>
+                    <subject>cn=test,dc=dataone,dc=org</subject>
+                    <subject>cn=test2,dc=dataone,dc=org</subject>
+                    <subject>cn=test3,dc=dataone,dc=org</subject>
+                </allowed>
+            </restriction>
+            <restriction methodName="updateReplicationMetadata">
+                <allowed>
+                    <subject>cn=test,dc=dataone,dc=org</subject>
+                    <subject>cn=test2,dc=dataone,dc=org</subject>
+                    <subject>cn=test3,dc=dataone,dc=org</subject>
+                </allowed>
+            </restriction>
+        </service>
+    </services>
+    <subject>cn=test,dc=dataone,dc=org</subject>
+    <subject>cn=test2,dc=dataone,dc=org</subject>
+    <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>
+    <contactSubject>cn=test2,dc=dataone,dc=org</contactSubject>
+</d1:node>

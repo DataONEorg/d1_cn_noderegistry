@@ -19,7 +19,11 @@
         <service name="MNRead" version="v1" available="true"/>
         <service name="MNAuthorization" version="v1" available="true"/>
         <service name="MNStorage" version="v1" available="true"/>
-        <service name="MNReplication" version="v1" available="false"/>
+        <service name="MNReplication" version="v1" available="false">
+            <restriction methodName="replicate">
+                <allowed><subject>cn=test,dc=dataone,dc=org</subject></allowed>
+            </restriction>
+        </service>
     </services>
     <synchronization>
         <schedule hour="*" mday="*" min="0,5,10,15,20,25,30,35,40,45,50,55" mon="11" sec="30" wday="?" year="2001"/>
