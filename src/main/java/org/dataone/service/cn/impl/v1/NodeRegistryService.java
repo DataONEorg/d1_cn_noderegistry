@@ -496,20 +496,14 @@ public class NodeRegistryService extends LDAPService {
         serviceMethodRestriction.setMethodName(getEnumerationValueString(attributesMap.get("d1servicemethodname")));
 
         if (attributesMap.containsKey("d1allowedsubject")) {
-            SubjectList subjectList;
-            if (serviceMethodRestriction.getAllowed() == null) {
-                subjectList = new SubjectList();
+            List<Subject>  subjectList = serviceMethodRestriction.getSubjectList();
 
-            } else {
-                subjectList = serviceMethodRestriction.getAllowed();
-            }
             NamingEnumeration allowSubjects = attributesMap.get("d1allowedsubject");
             while (allowSubjects.hasMore()) {
                 Subject allowSubject = new Subject();
                 allowSubject.setValue((String) allowSubjects.next());
-                subjectList.addSubject(allowSubject);
+                subjectList.add(allowSubject);
             }
-            serviceMethodRestriction.setAllowed(subjectList);
         }
 
         return serviceMethodRestriction;
@@ -591,8 +585,8 @@ public class NodeRegistryService extends LDAPService {
         serviceAttributes.put(new BasicAttribute("d1NodeId", node.getIdentifier().getValue()));
 
         serviceAttributes.put(new BasicAttribute("d1ServiceMethodName", restrict.getMethodName()));
-        if (restrict.getAllowed() != null && restrict.getAllowed().getSubjectList() != null && !(restrict.getAllowed().getSubjectList().isEmpty())) {
-            for (Subject subject : restrict.getAllowed().getSubjectList()) {
+        if (restrict.getSubjectList() != null && !(restrict.getSubjectList().isEmpty())) {
+            for (Subject subject : restrict.getSubjectList()) {
                 serviceAttributes.put(new BasicAttribute("d1AllowedSubject", subject.getValue()));
             }
         }

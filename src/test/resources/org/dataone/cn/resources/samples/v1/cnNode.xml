@@ -21,18 +21,14 @@
         <service name="CNRegister" version="v1" available="true"/>
         <service name="CNReplication" version="v1" available="false">
             <restriction methodName="setReplicationPolicy">
-                <allowed>
                     <subject>cn=test,dc=dataone,dc=org</subject>
                     <subject>cn=test2,dc=dataone,dc=org</subject>
                     <subject>cn=test3,dc=dataone,dc=org</subject>
-                </allowed>
             </restriction>
             <restriction methodName="updateReplicationMetadata">
-                <allowed>
                     <subject>cn=test,dc=dataone,dc=org</subject>
                     <subject>cn=test2,dc=dataone,dc=org</subject>
                     <subject>cn=test3,dc=dataone,dc=org</subject>
-                </allowed>
             </restriction>
         </service>
     </services>
