@@ -21,7 +21,7 @@
         <service name="MNStorage" version="v1" available="true"/>
         <service name="MNReplication" version="v1" available="false">
             <restriction methodName="replicate">
-                <allowed><subject>cn=test,dc=dataone,dc=org</subject></allowed>
+                <subject>cn=test,dc=dataone,dc=org</subject>
             </restriction>
         </service>
     </services>

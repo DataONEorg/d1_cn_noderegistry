@@ -105,7 +105,7 @@ public class HazelcastLdapStoreTest {
                     // if the subjects change this logic
                     for (ServiceMethodRestriction serviceMethodRestriction : service.getRestrictionList()) {
                         logger.info("ServiceMethodRestriction: " + serviceMethodRestriction.getMethodName());
-                        for (Subject subject : serviceMethodRestriction.getAllowed().getSubjectList()) {
+                        for (Subject subject : serviceMethodRestriction.getSubjectList()) {
                             assertTrue(subject.getValue().equalsIgnoreCase("cn=test,dc=dataone,dc=org"));
                         }
                     }
