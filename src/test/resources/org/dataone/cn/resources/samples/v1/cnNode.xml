@@ -19,13 +19,9 @@
         <service name="CNRead" version="v1" available="true"/>
         <service name="CNAuthorization" version="v1" available="true"/>
         <service name="CNRegister" version="v1" available="true"/>
-        <service name="CNReplication" version="v1" available="false">
-            <restriction methodName="setReplicationPolicy">
-                    <subject>cn=test,dc=dataone,dc=org</subject>
-                    <subject>cn=test2,dc=dataone,dc=org</subject>
-                    <subject>cn=test3,dc=dataone,dc=org</subject>
-            </restriction>
-            <restriction methodName="updateReplicationMetadata">
+        <service name="CNReplication" version="v1" available="true" />
+        <service name="CNIdentity" version="v1" available="true">
+           <restriction methodName="mapIdentity">
                     <subject>cn=test,dc=dataone,dc=org</subject>
                     <subject>cn=test2,dc=dataone,dc=org</subject>
                     <subject>cn=test3,dc=dataone,dc=org</subject>

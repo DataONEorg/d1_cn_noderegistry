@@ -72,8 +72,13 @@ public class NodeRegistryService extends LDAPService {
             List<Service> serviceList = this.getAllServices(nodeIdentifier);
             if (!serviceList.isEmpty()) {
                 for (Service service : serviceList) {
-
-                    service.setRestrictionList(null);
+                    String nodeServiceId = buildNodeServiceId(service);;
+                    log.info("\t has service " + nodeServiceId);
+                    List<ServiceMethodRestriction> restrictionList = this.getServiceMethodRestrictions(nodeIdentifier,nodeServiceId);
+                    for (ServiceMethodRestriction restrict : restrictionList) {
+                        log.info("\t\t has restriction" + restrict.getMethodName());
+                    }
+                    service.setRestrictionList(restrictionList);
                 }
                 Services services = new Services();
                 services.setServiceList(serviceList);
@@ -101,9 +106,15 @@ public class NodeRegistryService extends LDAPService {
         log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
         List<Service> serviceList = this.getAllServices(nodeIdentifier.getValue());
         if (!serviceList.isEmpty()) {
+                for (Service service : serviceList) {
+                    String nodeServiceId = buildNodeServiceId(service);
+
+                    service.setRestrictionList(this.getServiceMethodRestrictions(node.getIdentifier().getValue(),nodeServiceId));
+                }
             Services services = new Services();
             services.setServiceList(serviceList);
             node.setServices(services);
+
         }
 
         return node;
@@ -221,7 +232,6 @@ public class NodeRegistryService extends LDAPService {
                 while (values.hasMore()) {
                     Attribute attribute = values.next();
                     String attributeName = attribute.getID().toLowerCase();
-                    log.info("found attributeName: " + attributeName);
                     NamingEnumeration<?> attributeValue = attribute.getAll();
                     attributesMap.put(attributeName, attributeValue);
                 }
@@ -329,7 +339,6 @@ public class NodeRegistryService extends LDAPService {
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
                 String nodeDn = si.getNameInNamespace();
-                log.debug("Search result found for: " + nodeDn);
 
                 //return dn;
                 // or we could double check
@@ -363,7 +372,14 @@ public class NodeRegistryService extends LDAPService {
             DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-            log.info("BASE: " + base);
+            // mapIdentity, CNIdentity-v1, R2T6, dataone.org
+            // dn: d1ServiceMethodName=mapIdentity,d1NodeServiceId=CNIdentity-v1,cn=R2T6,dc=dataone,dc=org
+            // d1NodeServiceId: CNIdentity-v1
+            // d1AllowedSubject: cn=test3,dc=dataone,dc=org
+            // d1ServiceMethodName: mapIdentity
+            // objectClass: d1ServiceMethodRestriction
+            // d1NodeId: R2T6
+
             NamingEnumeration<SearchResult> results =
                     ctx.search(this.base, "(&(&(objectClass=d1ServiceMethodRestriction)(d1NodeServiceId=" + serviceIdentifier + "))(d1NodeId=" + nodeIdentifier + "))", ctls);
 
@@ -380,7 +396,6 @@ public class NodeRegistryService extends LDAPService {
                 while (values.hasMore()) {
                     Attribute attribute = values.next();
                     String attributeName = attribute.getID().toLowerCase();
-                    log.info("found attributeName: " + attributeName);
                     NamingEnumeration<?> attributeValue = attribute.getAll();
                     attributesMap.put(attributeName, attributeValue);
                 }
@@ -660,7 +675,42 @@ public class NodeRegistryService extends LDAPService {
             throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
         }
     }
+    public Date getLogLastAggregated(NodeReference nodeIdentifier) throws ServiceFailure {
+        Date logLastAggregated = null;
+        try {
+            HashMap<String, NamingEnumeration> attributesMap = getNodeAttributeMap(buildNodeDN(nodeIdentifier));
+            if (attributesMap.containsKey("d1nodeloglastaggregated")) {
+                logLastAggregated = DateTimeMarshaller.deserializeDateToUTC(getEnumerationValueString(attributesMap.get("d1nodeloglastaggregated")));
+            }
+        } catch (Exception e) {
+            log.error("Problem approving node " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
+        }
+        return logLastAggregated;
+    }
+    public void setLogLastAggregated(NodeReference nodeIdentifier, Date logAggregationDate) throws ServiceFailure {
+        try {
+            String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
+            String strLogLastAggregated = DateTimeMarshaller.serializeDateToUTC(logAggregationDate);
+            Attribute d1NodeLogLastAggregated = new BasicAttribute("d1NodeLogLastAggregated", strLogLastAggregated);
+            // get a handle to an Initial DirContext
+            DirContext ctx = getContext();
 
+            // construct the list of modifications to make
+            ModificationItem[] mods = new ModificationItem[1];
+            if (getLogLastAggregated(nodeIdentifier) == null) {
+                mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeLogLastAggregated);
+            } else {
+                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, d1NodeLogLastAggregated);
+            }
+            // make the change
+            ctx.modifyAttributes(dnNodeIdentifier, mods);
+            log.debug("set LogLastAggregated: " + dnNodeIdentifier  + " to " + strLogLastAggregated);
+        } catch (Exception e) {
+            log.error("Problem setting LogLastAggregated " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
+        }
+    }
     public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
         try {
             String nodeDn = buildNodeDN(nodeid);
