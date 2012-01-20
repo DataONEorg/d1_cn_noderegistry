@@ -64,19 +64,19 @@ public class NodeRegistryService extends LDAPService {
         NodeList nodeList = new NodeList();
 
         List<Node> allNodes = this.getAllNodes();
-        log.info("found " + allNodes.size() + " nodes");
+        log.debug("found " + allNodes.size() + " nodes");
         for (Node node : allNodes) {
 
             String nodeIdentifier = node.getIdentifier().getValue();
-            log.info(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
+            log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
             List<Service> serviceList = this.getAllServices(nodeIdentifier);
             if (!serviceList.isEmpty()) {
                 for (Service service : serviceList) {
                     String nodeServiceId = buildNodeServiceId(service);;
-                    log.info("\t has service " + nodeServiceId);
+                    log.trace("\t has service " + nodeServiceId);
                     List<ServiceMethodRestriction> restrictionList = this.getServiceMethodRestrictions(nodeIdentifier,nodeServiceId);
                     for (ServiceMethodRestriction restrict : restrictionList) {
-                        log.info("\t\t has restriction" + restrict.getMethodName());
+                        log.trace("\t\t has restriction" + restrict.getMethodName());
                     }
                     service.setRestrictionList(restrictionList);
                 }
@@ -215,14 +215,14 @@ public class NodeRegistryService extends LDAPService {
             DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-            log.info("BASE: " + base);
+            log.trace("BASE: " + base);
             NamingEnumeration<SearchResult> results =
                     ctx.search(this.base, "(&(objectClass=d1Node)(d1NodeApproved=TRUE))", ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
                 String nodeDn = si.getNameInNamespace();
-                log.info("Search result found for: " + nodeDn);
+                log.trace("Search result found for: " + nodeDn);
 
                 //return dn;
                 // or we could double check
@@ -262,7 +262,7 @@ public class NodeRegistryService extends LDAPService {
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
                 String nodeDn = si.getNameInNamespace();
-                log.debug("Search result found for: " + nodeDn);
+                log.trace("Search result found for: " + nodeDn);
 
                 //return dn;
                 // or we could double check
@@ -304,7 +304,7 @@ public class NodeRegistryService extends LDAPService {
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
                 String nodeDn = si.getNameInNamespace();
-                log.debug("Search result found for: " + nodeDn);
+                log.trace("Search result found for: " + nodeDn);
 
                 //return dn;
                 // or we could double check
@@ -386,7 +386,7 @@ public class NodeRegistryService extends LDAPService {
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
                 String nodeDn = si.getNameInNamespace();
-                log.info("Search result found for: " + nodeDn);
+                log.trace("Search result found for: " + nodeDn);
 
                 //return dn;
                 // or we could double check
@@ -468,7 +468,7 @@ public class NodeRegistryService extends LDAPService {
             if (node.getType().compareTo(NodeType.MN) == 0) {
                 // My assumption is if d1NodeSynSchdSec does not exist, then
                 // the node does not have a schedule
-                log.info("found a Membernode");
+                log.trace("found a Membernode");
                 if (attributesMap.containsKey("d1nodesynschdsec")) {
                     Synchronization synchronization = new Synchronization();
                     Schedule schedule = new Schedule();
@@ -738,13 +738,13 @@ public class NodeRegistryService extends LDAPService {
                     String serviceDN = buildNodeServiceDN(node.getIdentifier(), service);
                     Attributes serviceAttributes = buildNodeServiceAttributes(node, service);
                     ctx.createSubcontext(serviceDN, serviceAttributes);
-                    log.debug("updateNodeCapabilities Added Node Service entry " + serviceDN);
+                    log.trace("updateNodeCapabilities Added Node Service entry " + serviceDN);
                     if (service.getRestrictionList() != null) {
                         for (ServiceMethodRestriction restriction : service.getRestrictionList()) {
                             String serviceMethodRestrictionDN = buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction);
                             Attributes serviceMethodRestrictionAttributes = buildServiceMethodRestrictionAttributes(node, service, restriction);
                             ctx.createSubcontext(serviceMethodRestrictionDN, serviceMethodRestrictionAttributes);
-                            log.debug("updateNodeCapabilities Added Service Method Restriction entry " + serviceMethodRestrictionDN);
+                            log.trace("updateNodeCapabilities Added Service Method Restriction entry " + serviceMethodRestrictionDN);
                         }
                     }
                 }
@@ -921,10 +921,10 @@ public class NodeRegistryService extends LDAPService {
         if (attributesMap.containsKey("d1nodestate")) {
             NodeState currentNodeState = NodeState.convert(getEnumerationValueString(attributesMap.get("d1nodestate")));
             if (node.getState() == null) {
-                log.error("HEY HEY HEY node state is null");
+                log.error("node state is null");
             }
             if (currentNodeState == null) {
-                log.error("HEY HEY HEY currentNodeStateis null:" + getEnumerationValueString(attributesMap.get("d1nodestate")));
+                log.error("currentNodeStateis null:" + getEnumerationValueString(attributesMap.get("d1nodestate")));
             }
             if (node.getState().compareTo(currentNodeState) != 0) {
                 Attribute d1NodeState = new BasicAttribute("d1NodeState", node.getState().xmlValue());
@@ -946,7 +946,7 @@ public class NodeRegistryService extends LDAPService {
             if (nodeType.compareTo(NodeType.MN) == 0) {
                 // My assumption is if d1NodeSynSchdSec does not exist, then
                 // the node does not have a schedule
-                log.info("found a Membernode");
+                log.trace("found a Membernode");
                 if (attributesMap.containsKey("d1nodesynschdsec")) {
                     if ((node.getSynchronization() != null)) {
 
@@ -1043,7 +1043,6 @@ public class NodeRegistryService extends LDAPService {
             attributesMap.put(attributeName, attributeValue);
 
         }
-        log.debug("Retrieved SubjectList for: " + nodeDN);
 
         return attributesMap;
 
@@ -1054,11 +1053,11 @@ public class NodeRegistryService extends LDAPService {
         List<Service> services = getAllServices(nodeReference.getValue());
         if ((services != null) && (services.size() > 0)) {
             for (Service service : services) {
-                log.info("deleteNode Service: " + service.getName());
+                log.debug("deleteNode Service: " + service.getName());
                 List<ServiceMethodRestriction> serviceRestrictionList = getServiceMethodRestrictions(nodeReference.getValue(), buildNodeServiceId(service));
                 if (serviceRestrictionList != null) {
                     for (ServiceMethodRestriction restriction : serviceRestrictionList) {
-                        log.info("deleteNode deleting " + buildServiceMethodRestrictionDN(nodeReference, service, restriction));
+                        log.debug("deleteNode deleting " + buildServiceMethodRestrictionDN(nodeReference, service, restriction));
                         if (!deleteServiceMethodRestriction(nodeReference, service, restriction)) {
 
                             throw new ServiceFailure("0", "Unable to delete restriction " + buildServiceMethodRestrictionDN(nodeReference, service, restriction));
