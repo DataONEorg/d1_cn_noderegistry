@@ -12,18 +12,14 @@
         replicate="true" synchronize="true" type="mn" state="up">
     <identifier>urn:node:test</identifier>
     <name>localhost-test-1</name>
-    <description>Nowhere Test Member node</description>
-    <baseURL>https://nowhere.com/mn</baseURL>
+    <description>Nasty Localhost Test Member node</description>
+    <baseURL>https://localhost:8080/mn</baseURL>
     <services>
         <service name="MNCore" version="v1" available="true"/>
         <service name="MNRead" version="v1" available="true"/>
         <service name="MNAuthorization" version="v1" available="true"/>
         <service name="MNStorage" version="v1" available="true"/>
-        <service name="MNReplication" version="v1" available="false">
-            <restriction methodName="replicate">
-                <subject>cn=test,dc=dataone,dc=org</subject>
-            </restriction>
-        </service>
+        <service name="MNReplication" version="v1" available="false"/>
     </services>
     <synchronization>
         <schedule hour="*" mday="*" min="0,5,10,15,20,25,30,35,40,45,50,55" mon="11" sec="30" wday="?" year="2001"/>

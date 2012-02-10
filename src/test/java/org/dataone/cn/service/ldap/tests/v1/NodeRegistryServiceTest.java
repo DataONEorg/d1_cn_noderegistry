@@ -1,5 +1,11 @@
 package org.dataone.cn.service.ldap.tests.v1;
 
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.dataone.service.exceptions.IdentifierNotUnique;
+import org.dataone.service.exceptions.InvalidRequest;
+import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.NodeReference;
 import java.util.List;
 import org.dataone.service.types.v1.Node;
@@ -10,12 +16,16 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.service.types.v1.NodeList;
+import org.jibx.runtime.JiBXException;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import org.dataone.cn.ldap.NodeAccess;
+import org.dataone.cn.ldap.NodeServicesAccess;
+import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
 import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
@@ -24,6 +34,10 @@ public class NodeRegistryServiceTest {
 
     public static Log log = LogFactory.getLog(NodeRegistryServiceTest.class);
     NodeRegistryService nodeRegistryService = new NodeRegistryService();
+    NodeAccess nodeAccess = new NodeAccess();
+    NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
+    ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
+
     final static int SIZE = 16384;
 
     @Test
@@ -44,7 +58,6 @@ public class NodeRegistryServiceTest {
 
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
         assertNotNull(mnNodeReference);
-        testMNNode.setIdentifier(mnNodeReference);
         testNodeList.add(testMNNode);
 
 
@@ -63,7 +76,6 @@ public class NodeRegistryServiceTest {
 
 
         NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
-        assertNotNull(cnNodeReference);
         testCNNode.setIdentifier(cnNodeReference);
         testNodeList.add(testCNNode);
 
@@ -77,7 +89,7 @@ public class NodeRegistryServiceTest {
         assertTrue(testCNRetrieval.getIdentifier().getValue().equalsIgnoreCase(cnNodeReference.getValue()));
         for (Node node : testNodeList) {
 
-            nodeRegistryService.approveNode(node.getIdentifier());
+            nodeAccess.setNodeApproved(node.getIdentifier(), Boolean.TRUE);
         }
         try {
             NodeList nodeList = nodeRegistryService.listNodes();
@@ -120,7 +132,63 @@ public class NodeRegistryServiceTest {
 
         for (Node node : testNodeList) {
 
-            nodeRegistryService.deleteNode(node.getIdentifier());
+            List<Service> services = nodeServicesAccess.getServiceList(node.getIdentifier().getValue());
+            if ((services != null) && (services.size() > 0)) {
+                for (Service service : services) {
+                    log.debug("deleteNode Service: " + service.getName());
+                    List<ServiceMethodRestriction> serviceRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(node.getIdentifier().getValue(), nodeServicesAccess.buildNodeServiceId(service));
+                    if (serviceRestrictionList != null) {
+                        for (ServiceMethodRestriction restriction : serviceRestrictionList) {
+                            log.debug("deleteNode deleting " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction));
+                            if (!serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(node.getIdentifier(), service, restriction)) {
+
+                                fail( "Unable to delete restriction " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction));
+                            }
+                        }
+                    }
+                    if (!nodeServicesAccess.deleteNodeService(node.getIdentifier(), service)) {
+                        fail(  "Unable to delete service " + nodeServicesAccess.buildNodeServiceDN(node.getIdentifier(), service));
+                    }
+                }
+            }
+            nodeAccess.deleteNode(node.getIdentifier());
         }
+    }
+
+    @Test(expected=InvalidRequest.class)
+    public void testRegisterBadLocalhostNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest  {
+        ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
+        InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/mnBadLocalhostNode.xml");
+
+        BufferedInputStream bInputStream = new BufferedInputStream(is);
+        byte[] barray = new byte[SIZE];
+        int nRead = 0;
+        while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+            mnNodeOutput.write(barray, 0, nRead);
+        }
+        bInputStream.close();
+        ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
+        Node testMNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
+
+    }
+    @Test(expected=InvalidRequest.class)
+    public void testRegisterBadNodeId() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest  {
+        ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
+        InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/mnBadNodeId.xml");
+
+        BufferedInputStream bInputStream = new BufferedInputStream(is);
+        byte[] barray = new byte[SIZE];
+        int nRead = 0;
+        while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+            mnNodeOutput.write(barray, 0, nRead);
+        }
+        bInputStream.close();
+        ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
+        Node testMNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
+
     }
 }

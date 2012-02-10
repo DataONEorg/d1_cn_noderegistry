@@ -4,6 +4,10 @@
  */
 package org.dataone.cn.service.ldap.tests.v1;
 
+import java.util.List;
+import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
+import org.dataone.cn.ldap.NodeServicesAccess;
+import org.dataone.cn.ldap.NodeAccess;
 import java.util.Set;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
@@ -37,6 +41,9 @@ public class HazelcastLdapStoreTest {
     private HazelcastInstance hazelcastInstance;
     final static int SIZE = 16384;
     NodeRegistryService nodeRegistryService = new NodeRegistryService();
+    NodeAccess nodeAccess = new NodeAccess();
+    NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
+    ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
 
     /**
      * pull in the CnCore implementation to test against
@@ -82,7 +89,7 @@ public class HazelcastLdapStoreTest {
             assertNull(nullnode);
             nodeReference = nodeRegistryService.register(testNode);
             testNode.setIdentifier(nodeReference);
-            nodeRegistryService.approveNode(nodeReference);
+            nodeAccess.setNodeApproved(nodeReference, Boolean.TRUE);
             testNode.setReplicate(false);
             Subject contactSubject = new Subject();
             contactSubject.setValue("cn=test2,dc=dataone,dc=org");
@@ -131,7 +138,26 @@ public class HazelcastLdapStoreTest {
             ex.printStackTrace();
             fail("loadNodeTest");
         } finally {
-            nodeRegistryService.deleteNode(nodeReference);
+            List<Service> services = nodeServicesAccess.getServiceList(nodeReference.getValue());
+            if ((services != null) && (services.size() > 0)) {
+                for (Service service : services) {
+                    logger.debug("deleteNode Service: " + service.getName());
+                    List<ServiceMethodRestriction> serviceRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(nodeReference.getValue(), nodeServicesAccess.buildNodeServiceId(service));
+                    if (serviceRestrictionList != null) {
+                        for (ServiceMethodRestriction restriction : serviceRestrictionList) {
+                            logger.debug("deleteNode deleting " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(nodeReference, service, restriction));
+                            if (!serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(nodeReference, service, restriction)) {
+
+                                fail( "Unable to delete restriction " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(nodeReference, service, restriction));
+                            }
+                        }
+                    }
+                    if (!nodeServicesAccess.deleteNodeService(nodeReference, service)) {
+                        fail(  "Unable to delete service " + nodeServicesAccess.buildNodeServiceDN(nodeReference, service));
+                    }
+                }
+            }
+            nodeAccess.deleteNode(nodeReference);
         }
     }
 }

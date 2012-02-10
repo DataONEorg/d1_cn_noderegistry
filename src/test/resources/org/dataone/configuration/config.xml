@@ -3,4 +3,5 @@
 <configuration>
         <properties fileName="ldapService.properties"/>
 	<properties fileName="registryLdap.properties"/>
+        <properties fileName="node.properties"/>
 </configuration>
