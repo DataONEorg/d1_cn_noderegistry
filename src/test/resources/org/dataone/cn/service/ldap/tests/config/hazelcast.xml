@@ -112,7 +112,7 @@
       Use Metacat as the backing store for the ObjectPathMap
      -->
     <map-store enabled="true">
-      <class-name>org.dataone.cn.hazelcast.ldap.HazelcastLdapStore</class-name>
+      <class-name>org.dataone.cn.hazelcast.HazelcastLdapStore</class-name>
       <write-delay-seconds>0</write-delay-seconds>
     </map-store>
   </map>
