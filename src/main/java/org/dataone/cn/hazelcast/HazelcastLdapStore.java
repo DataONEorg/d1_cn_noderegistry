@@ -25,14 +25,24 @@ import org.dataone.service.types.v1.NodeList;
 import org.dataone.service.types.v1.NodeReference;
 
 /**
- * Provide read and write access to the nodelist stored in LDAP
+ * Provide Hazelcast persistence to the nodelist stored in LDAP by
+ * implementing the MapLoader and MapStore interfaces
+ * 
  * @author waltz
  */
 public class HazelcastLdapStore implements MapLoader, MapStore {
 
     public static Log log = LogFactory.getLog(HazelcastLdapStore.class);
     private static NodeRegistryService nodeRegistry = new NodeRegistryService();
-
+    /**
+     * Loads the Node of the given NodeReference. If distributed map doesn't contain the Node
+     * for the given odeReference then load will call nodeRegistry.getNode(key) method
+     * to obtain the value.
+     *
+     * @author waltz
+     * @param key NodeReference
+     * @return value Node
+     */
     @Override
     public Object load(Object key) {
         Node node = null;
@@ -47,6 +57,14 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
         return node;
     }
 
+     /**
+     * Loads given NodeReferences. This is batch load operation so that calling methods can
+     * optimize the multiple loads.
+     *
+     * @author waltz
+     * @param keys keys of the values entries to load
+     * @return map of loaded NodeReferences-Node pairs.
+     */
     @Override
     public Map loadAll(Collection keyCollection) {
         // Interpret loadAll as a way to get allNode again?
@@ -67,7 +85,12 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
         }
         return mappedStore;
     }
-
+    /**
+     * Loads all of the NodeReferences from  LDAP.
+     *
+     * @author waltz
+     * @return Set of NodeReferences
+     */
     @Override
     public Set loadAllKeys() {
         // upon instantiation of this Store, or when the first time
@@ -89,7 +112,20 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
         }
         return keys;
     }
-
+    /**
+     * Updates the NodeReference key in LDAP with the provided Node value
+     *
+     * Cannot be used to create a Node, use LDAP access layer
+     * for node creation.
+     *
+     * When a node is created, you should not be
+     * able to 'get' the node via hazelcast map
+     * due to validation requirements.
+     *
+     * @author waltz
+     * @param key   NodeReference
+     * @param value Node
+     */
     @Override
     public void store(Object key, Object value) {
 
@@ -147,12 +183,25 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
 
     }
 
+    /**
+     * Stores multiple nodes. Left Unimplemented
+     *
+     * @param map map of entries to LDAP
+     * @throws UnsupportedOperationException
+     */
     @Override
     public void storeAll(Map map) {
         throw new UnsupportedOperationException("Not supported yet.");
 
     }
-
+    /**
+     *
+     * Deletes the node with a given key from LDAP.
+     *
+     * @author waltz
+     * @param key NodeReference to delete from the LDAP
+     *
+     */
     @Override
     public void delete(Object key) {
         try {
