@@ -71,7 +71,7 @@ public class NodeServicesAccess extends LDAPService {
      * @param nodeReference
      * @param service
      * @return String of DN
-     * @author waltz
+     * 
      */
     public String buildNodeServiceDN(NodeReference nodeReference, Service service) {
         String d1NodeServiceId = buildNodeServiceId(service);
@@ -100,7 +100,7 @@ public class NodeServicesAccess extends LDAPService {
      * @param nodeReference
      * @param service
      * @return Boolean
-     * @author waltz
+     * 
      */
     public Boolean deleteNodeService(NodeReference nodeReference, Service service) {
 
@@ -113,7 +113,7 @@ public class NodeServicesAccess extends LDAPService {
      * @param nodeIdentifier
      * @return List<Service>
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public List<Service> getServiceList(String nodeIdentifier) throws ServiceFailure {
         List<Service> allServices = new ArrayList<Service>();
@@ -158,7 +158,7 @@ public class NodeServicesAccess extends LDAPService {
      * @param node
      * @param service
      * @return Attributes
-     * @author waltz
+     * 
      */
     public Attributes mapNodeServiceAttributes(Node node, Service service) {
         Attributes serviceAttributes = new BasicAttributes();
@@ -180,7 +180,7 @@ public class NodeServicesAccess extends LDAPService {
      *
      * @param attributesMap
      * @return Service
-     * @author waltz
+     * 
      */
     public Service mapService(HashMap<String, String> attributesMap) {
         Service service = new Service();

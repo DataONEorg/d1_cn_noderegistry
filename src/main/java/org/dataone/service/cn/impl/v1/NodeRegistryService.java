@@ -86,7 +86,7 @@ public class NodeRegistryService {
      * @return a DataONE NodeList
      * @throws ServiceFailure
      * @throws NotImplemented
-     * @author waltz
+     * 
      */
     public NodeList listNodes() throws NotImplemented, ServiceFailure {
         NodeList nodeList = new NodeList();
@@ -125,7 +125,7 @@ public class NodeRegistryService {
      * @return a DataONE Node
      * @throws ServiceFailure
      * @throws NotFound
-     * @author waltz
+     * 
      */
 
     public Node getNode(NodeReference nodeIdentifier) throws ServiceFailure, NotFound {
@@ -169,7 +169,7 @@ public class NodeRegistryService {
      * @return The generated Node Identifier for the newly registered Node
      * @throws ServiceFailure
      * @throws IdentifierNotUnique
-     * @author waltz
+     * 
      */
 
     public NodeReference register(Node node) throws ServiceFailure, InvalidRequest, IdentifierNotUnique {
@@ -180,7 +180,7 @@ public class NodeRegistryService {
         }
         Matcher validNodeIdMatcher = validNodeIdPattern.matcher(node.getIdentifier().getValue());
         if (!validNodeIdMatcher.matches()) {
-            throw new InvalidRequest("4823", Settings.getConfiguration().getString("cn.nodeId.validation.errorText"));
+            throw new InvalidRequest("4823", "Problem registring " + node.getIdentifier().getValue() + "-" + Settings.getConfiguration().getString("cn.nodeId.validation.errorText"));
         }
         // validate that the node Id in the node structure is unique and conforms
         // to the naming convention rules and max length rules
@@ -231,7 +231,7 @@ public class NodeRegistryService {
      * @throws ServiceFailure
      * @throws InvalidRequest
      * @throws NotFound
-     * @author waltz
+     * 
      */
 
     public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
@@ -248,7 +248,7 @@ public class NodeRegistryService {
      * @param NodeReference The Node Identifier to be removed
      * @return true upon success (?)
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
 
     public void deleteNode(NodeReference nodeReference) throws ServiceFailure {
@@ -283,7 +283,7 @@ public class NodeRegistryService {
      * @param NodeReference The Node Identifier to be approved
      * @return true upon success (?)
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
 
     public void approveNode(NodeReference nodeReference) throws ServiceFailure {
