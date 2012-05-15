@@ -91,7 +91,7 @@ public class NodeAccess extends LDAPService {
      *
      * @param nodeReference
      * @return String of DN
-     * @author waltz
+     * 
      */
     public String buildNodeDN(NodeReference nodeReference) {
         return "cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
@@ -105,7 +105,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeDN Distinguished name of the DN, provided by buildNodeDN
      * @return String
      * @throws NamingException
-     * @author waltz
+     * 
      */
     public HashMap<String, NamingEnumeration> buildNodeAttributeMap(String nodeDN) throws NamingException {
         HashMap<String, NamingEnumeration> attributesMap = new HashMap<String, NamingEnumeration>();
@@ -133,7 +133,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeReference
      * @return Boolean
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public Boolean deleteNode(NodeReference nodeReference) throws ServiceFailure {
 
@@ -148,7 +148,7 @@ public class NodeAccess extends LDAPService {
      *
      * @return List<String>
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public List<String> getApprovedNodeIdList() throws ServiceFailure {
         List<String> allNodeIds = new ArrayList<String>();
@@ -179,7 +179,8 @@ public class NodeAccess extends LDAPService {
                 }
             }
         } catch (Exception e) {
-            log.error("Problem search Nodes for Nodelist", e);
+            e.printStackTrace();
+            log.error("Problem searching Approved Node Ids ", e);
             throw new ServiceFailure("-1", e.getMessage());
         }
         return allNodeIds;
@@ -190,7 +191,7 @@ public class NodeAccess extends LDAPService {
      *
      * @return List<Node>
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public List<Node> getApprovedNodeList() throws ServiceFailure {
         List<Node> allNode = new ArrayList<Node>();
@@ -222,7 +223,8 @@ public class NodeAccess extends LDAPService {
                 allNode.add(this.mapNode(attributesMap));
             }
         } catch (Exception e) {
-            log.error("Problem search Nodes for Nodelist", e);
+            e.printStackTrace();
+            log.error("Problem searching Approved Nodes for Nodelist", e);
             throw new ServiceFailure("-1", e.getMessage());
         }
         return allNode;
@@ -246,7 +248,7 @@ public class NodeAccess extends LDAPService {
      *
      * @return Map<NodeReference, Map<String, String>>
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public Map<NodeReference, Map<String, String>> getCnLoggingStatus() throws ServiceFailure {
         Map<NodeReference, Map<String, String>> nodeLogStatus = new HashMap<NodeReference, Map<String, String>>();
@@ -286,6 +288,7 @@ public class NodeAccess extends LDAPService {
                 nodeLogStatus.put(nodeReference, nodeProperties);
             }
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Problem search Nodes for LoggingStatus", e);
             throw new ServiceFailure("-1", e.getMessage());
         }
@@ -301,7 +304,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeReference
      * @return Date
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public Date getLogLastAggregated(NodeReference nodeIdentifier) throws ServiceFailure {
         Date logLastAggregated = null;
@@ -311,8 +314,9 @@ public class NodeAccess extends LDAPService {
                 logLastAggregated = DateTimeMarshaller.deserializeDateToUTC(getEnumerationValueString(attributesMap.get("d1nodeloglastaggregated")));
             }
         } catch (Exception e) {
-            log.error("Problem approving node " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
+            e.printStackTrace();
+            log.error("Problem retrieving d1nodeloglastaggregated of " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could retrieve d1nodeloglastaggregated from: " + nodeIdentifier + " " + e.getMessage());
         }
         return logLastAggregated;
     }
@@ -325,7 +329,7 @@ public class NodeAccess extends LDAPService {
      * @throws NamingException
      * @throws NotFound
      * @throws NameNotFoundException
-     * @author waltz
+     * 
      */
     public Node getNode(String nodeDN) throws NotFound, NamingException, NameNotFoundException {
 
@@ -345,7 +349,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeIdentifier
      * @return Boolean
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public Boolean getNodeApproved(NodeReference nodeIdentifier) throws ServiceFailure {
         Boolean nodeApproved = false;
@@ -355,8 +359,9 @@ public class NodeAccess extends LDAPService {
                 nodeApproved = Boolean.getBoolean(getEnumerationValueString(attributesMap.get(NodeApprovedAttribute.toLowerCase())));
             }
         } catch (Exception e) {
-            log.error("Problem determining state " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "Could not determine state of : " + nodeIdentifier + " " + e.getMessage());
+            e.printStackTrace();
+            log.error("Problem determining approved state " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could not determine approved state of : " + nodeIdentifier + " " + e.getMessage());
         }
         return nodeApproved;
 
@@ -369,7 +374,7 @@ public class NodeAccess extends LDAPService {
      *
      * @return Map<String, String>
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public Map<String, String> getNodeIdList() throws ServiceFailure {
         Map<String, String> allNodeIds = new HashMap<String, String>();
@@ -406,6 +411,7 @@ public class NodeAccess extends LDAPService {
                 allNodeIds.put(nodeId, nodeBaseUrl);
             }
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Problem search Nodes for Nodelist", e);
             throw new ServiceFailure("-1", e.getMessage());
         }
@@ -418,7 +424,7 @@ public class NodeAccess extends LDAPService {
      *
      * @return List<NodeReference>
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public List<NodeReference> getPendingNodeReferenceList() throws ServiceFailure {
         List<NodeReference> allNodeIds = new ArrayList<NodeReference>();
@@ -451,7 +457,8 @@ public class NodeAccess extends LDAPService {
                 }
             }
         } catch (Exception e) {
-            log.error("Problem search Nodes for Nodelist", e);
+            e.printStackTrace();
+            log.error("Problem search Pending Nodes for Nodelist", e);
             throw new ServiceFailure("-1", e.getMessage());
         }
         return allNodeIds;
@@ -464,7 +471,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeIdentifier
      * @return ProcessingState
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public ProcessingState getProcessingState(NodeReference nodeIdentifier) throws ServiceFailure {
         ProcessingState processingState = null;
@@ -474,7 +481,8 @@ public class NodeAccess extends LDAPService {
                 processingState = ProcessingState.convert(getEnumerationValueString(attributesMap.get(ProcessingStateAttribute.toLowerCase())));
             }
         } catch (Exception e) {
-            log.error("Problem determining state " + nodeIdentifier, e);
+            e.printStackTrace();
+            log.error("Problem determining processing state " + nodeIdentifier, e);
             throw new ServiceFailure("4801", "Could not determine state of : " + nodeIdentifier + " " + e.getMessage());
         }
         return processingState;
@@ -487,7 +495,7 @@ public class NodeAccess extends LDAPService {
      * @param attributesMap
      * @return Node
      * @throws NamingException
-     * @author waltz
+     * 
      */
     public Node mapNode(HashMap<String, NamingEnumeration> attributesMap) throws NamingException {
         Node node = new Node();
@@ -590,7 +598,7 @@ public class NodeAccess extends LDAPService {
      *
      * @param node
      * @return Attributes
-     * @author waltz
+     * 
      */
     public Attributes mapNodeAttributes(Node node) {
         Attributes nodeAttributes = new BasicAttributes();
@@ -665,7 +673,7 @@ public class NodeAccess extends LDAPService {
      * @param node
      * @return List<ModificationItem>
      * @throws NamingException
-     * @author waltz
+     * 
      */
     public List<ModificationItem> mapNodeModificationItemList(HashMap<String, NamingEnumeration> attributesMap, Node node) throws NamingException {
         List<ModificationItem> modificationItemList = new ArrayList<ModificationItem>();
@@ -936,8 +944,6 @@ public class NodeAccess extends LDAPService {
             }
         }
         return modificationItemList;
-
-
     }
 
     /**
@@ -950,7 +956,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeIdentifier
      * @param lastDateNodeHarvested
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public void setDateLastHarvested(NodeReference nodeIdentifier, Date lastDateNodeHarvested) throws ServiceFailure {
         try {
@@ -967,6 +973,7 @@ public class NodeAccess extends LDAPService {
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("Updated entry: " + dnNodeIdentifier);
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Problem updating lastHarvested for node " + nodeIdentifier, e);
             throw new ServiceFailure("4801", "Could not update account: " + e.getMessage());
         }
@@ -981,7 +988,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeIdentifier
      * @param logAggregationDate
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public void setLogLastAggregated(NodeReference nodeIdentifier, Date logAggregationDate) throws ServiceFailure {
         try {
@@ -1002,6 +1009,7 @@ public class NodeAccess extends LDAPService {
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("set LogLastAggregated: " + dnNodeIdentifier + " to " + strLogLastAggregated);
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Problem setting LogLastAggregated " + nodeIdentifier, e);
             throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
         }
@@ -1014,7 +1022,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeIdentifier
      * @param approved
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public void setNodeApproved(NodeReference nodeIdentifier, Boolean approved) throws ServiceFailure {
         try {
@@ -1031,6 +1039,7 @@ public class NodeAccess extends LDAPService {
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("Approved Node: " + dnNodeIdentifier);
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Problem approving node " + nodeIdentifier, e);
             throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
         }
@@ -1045,7 +1054,7 @@ public class NodeAccess extends LDAPService {
      * @throws NotImplemented
      * @throws InvalidRequest
      * @throws NotFound
-     * @author waltz
+     * 
      */
     public void setNode(Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
         String dnNodeIdentifier = buildNodeDN(node.getIdentifier());
@@ -1094,6 +1103,7 @@ public class NodeAccess extends LDAPService {
                 }
                 log.debug("Updated NodeCapabilities Node: " + nodeDn);
             } catch (NamingException ex1) {
+                ex1.printStackTrace();
                 throw new ServiceFailure("0", "updateNodeCapabilities failed " + ex1.getMessage());
             }
         } catch (NamingException ex) {
@@ -1120,6 +1130,7 @@ public class NodeAccess extends LDAPService {
                     }
                 }
             } catch (NamingException ex1) {
+                ex1.printStackTrace();
                 throw new ServiceFailure("0", "Register failed " + ex1.getMessage());
             }
         }
@@ -1135,7 +1146,7 @@ public class NodeAccess extends LDAPService {
      * @param nodeIdentifier
      * @param processingState
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public void setProcessingState(NodeReference nodeIdentifier, ProcessingState processingState) throws ServiceFailure {
         try {
@@ -1155,8 +1166,9 @@ public class NodeAccess extends LDAPService {
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("set " + ProcessingStateAttribute + ": " + dnNodeIdentifier + " to " + processingState.getValue());
         } catch (Exception e) {
-            log.error("Problem setting LogLastAggregated " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
+            e.printStackTrace();
+            log.error("Problem setting ProcessingState " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could not set Processing state: " + nodeIdentifier + " " + e.getMessage());
         }
     }
 }

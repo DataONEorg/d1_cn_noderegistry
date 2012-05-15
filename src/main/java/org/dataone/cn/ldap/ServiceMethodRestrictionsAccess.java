@@ -77,7 +77,7 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @param service
      * @param restrict
      * @return String of DN
-     * @author waltz
+     * 
      */
     public String buildServiceMethodRestrictionDN(NodeReference nodeReference, Service service, ServiceMethodRestriction restrict) {
         String d1NodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
@@ -92,7 +92,7 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @param service
      * @param restrict
      * @return Boolean
-     * @author waltz
+     * 
      */
     public Boolean deleteServiceMethodRestriction(NodeReference nodeReference, Service service, ServiceMethodRestriction restrict) {
 
@@ -106,7 +106,7 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @param serviceIdentifier
      * @return List<ServiceMethodRestriction>
      * @throws ServiceFailure
-     * @author waltz
+     * 
      */
     public List<ServiceMethodRestriction> getServiceMethodRestrictionList(String nodeIdentifier, String serviceIdentifier) throws ServiceFailure {
         List<ServiceMethodRestriction> serviceMethodRestrictionList = new ArrayList<ServiceMethodRestriction>();
@@ -151,7 +151,7 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @param attributesMap
      * @return ServiceMethodRestriction
      * @throws NamingException
-     * @author waltz
+     * 
      */
     public ServiceMethodRestriction mapServiceMethodRestriction(HashMap<String, NamingEnumeration> attributesMap) throws NamingException {
         ServiceMethodRestriction serviceMethodRestriction = new ServiceMethodRestriction();
@@ -183,7 +183,7 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @param service
      * @param restrict 
      * @return Attributes
-     * @author waltz
+     * 
      */
     public Attributes mapServiceMethodRestrictionAttributes(Node node, Service service, ServiceMethodRestriction restrict) {
         Attributes serviceAttributes = new BasicAttributes();
