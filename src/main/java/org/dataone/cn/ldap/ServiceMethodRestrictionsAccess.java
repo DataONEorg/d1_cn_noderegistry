@@ -25,6 +25,7 @@ package org.dataone.cn.ldap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import javax.naming.CommunicationException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -137,6 +138,9 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
 
                 serviceMethodRestrictionList.add(this.mapServiceMethodRestriction(attributesMap));
             }
+        } catch (CommunicationException ex) {
+            log.error("LDAP Service is unreponsive " + nodeIdentifier, ex);
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             log.error("Problem search Nodes for Nodelist", e);
             throw new ServiceFailure("-1", e.getMessage());

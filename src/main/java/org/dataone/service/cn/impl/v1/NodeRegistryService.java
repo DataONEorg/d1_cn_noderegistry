@@ -208,12 +208,14 @@ public class NodeRegistryService {
 
             return node.getIdentifier();
         } catch (ServiceFailure ex) {
+            ex.setDetail_code("4842");
             throw ex;
         } catch (InvalidRequest ex) {
+            ex.setDetail_code("4843");
             throw ex;
         } catch (Exception ex) {
             log.error("Problem registering node " + node.getName(), ex);
-            throw new ServiceFailure("4801", ex.getMessage());
+            throw new ServiceFailure("4842", ex.getMessage());
         }
 
     }
