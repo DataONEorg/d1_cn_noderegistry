@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -178,6 +179,9 @@ public class NodeAccess extends LDAPService {
                     }
                 }
             }
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem searching Approved Node Ids ", e);
@@ -222,6 +226,9 @@ public class NodeAccess extends LDAPService {
 
                 allNode.add(this.mapNode(attributesMap));
             }
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem searching Approved Nodes for Nodelist", e);
@@ -287,6 +294,9 @@ public class NodeAccess extends LDAPService {
                 }
                 nodeLogStatus.put(nodeReference, nodeProperties);
             }
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem search Nodes for LoggingStatus", e);
@@ -410,6 +420,9 @@ public class NodeAccess extends LDAPService {
                 }
                 allNodeIds.put(nodeId, nodeBaseUrl);
             }
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem search Nodes for Nodelist", e);
@@ -456,6 +469,9 @@ public class NodeAccess extends LDAPService {
                     }
                 }
             }
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem search Pending Nodes for Nodelist", e);
@@ -972,6 +988,9 @@ public class NodeAccess extends LDAPService {
             // make the change
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("Updated entry: " + dnNodeIdentifier);
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem updating lastHarvested for node " + nodeIdentifier, e);
@@ -1008,6 +1027,9 @@ public class NodeAccess extends LDAPService {
             // make the change
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("set LogLastAggregated: " + dnNodeIdentifier + " to " + strLogLastAggregated);
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem setting LogLastAggregated " + nodeIdentifier, e);
@@ -1038,6 +1060,9 @@ public class NodeAccess extends LDAPService {
             // make the change
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("Approved Node: " + dnNodeIdentifier);
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Problem approving node " + nodeIdentifier, e);
@@ -1131,7 +1156,7 @@ public class NodeAccess extends LDAPService {
                 }
             } catch (NamingException ex1) {
                 ex1.printStackTrace();
-                throw new ServiceFailure("0", "Register failed " + ex1.getMessage());
+                throw new ServiceFailure("0", "Register failed due to LDAP communication failure");
             }
         }
 
@@ -1165,10 +1190,14 @@ public class NodeAccess extends LDAPService {
             // make the change
             ctx.modifyAttributes(dnNodeIdentifier, mods);
             log.debug("set " + ProcessingStateAttribute + ": " + dnNodeIdentifier + " to " + processingState.getValue());
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Problem setting ProcessingState " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "Could not set Processing state: " + nodeIdentifier + " " + e.getMessage());
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            log.error("LDAP Service is unreponsive " + nodeIdentifier);
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            log.error("Problem setting ProcessingState " + nodeIdentifier, ex);
+            throw new ServiceFailure("4801", "Could not set Processing state: " + nodeIdentifier + " " + ex.getMessage());
         }
     }
 }
