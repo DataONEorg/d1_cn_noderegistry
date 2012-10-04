@@ -28,11 +28,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
+import javax.naming.directory.BasicAttribute;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
+import org.dataone.cn.quartz.CronExpression;
 import org.dataone.configuration.Settings;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -82,7 +84,7 @@ public class NodeRegistryService {
      * Retreive a list of nodes that have been registered and approved
      * with the DataONE infrastructure.
      *
-     *
+     * @author waltz
      * @return a DataONE NodeList
      * @throws ServiceFailure
      * @throws NotImplemented
@@ -121,6 +123,7 @@ public class NodeRegistryService {
      * Retreive a node that have been registered
      * with the DataONE infrastructure.
      *
+     * @author waltz
      * @param NodeReference The Node Identifier to be retreived
      * @return a DataONE Node
      * @throws ServiceFailure
@@ -165,6 +168,7 @@ public class NodeRegistryService {
      * 
      * If the node already exists, then an IdentifierNotUnique exception MUST be returned.
      *
+     * @author waltz
      * @param Node The Node to be registered
      * @return The generated Node Identifier for the newly registered Node
      * @throws ServiceFailure
@@ -172,7 +176,7 @@ public class NodeRegistryService {
      * 
      */
 
-    public NodeReference register(Node node) throws ServiceFailure, InvalidRequest, IdentifierNotUnique {
+    public NodeReference register(Node node) throws ServiceFailure, InvalidRequest, IdentifierNotUnique, NotImplemented  {
         // do not allow localhost to be baseURL of a node
         Matcher httpPatternMatcher = excludeNodeBaseURLPattern.matcher(node.getBaseURL());
         if (httpPatternMatcher.find()) {
@@ -203,9 +207,10 @@ public class NodeRegistryService {
         }
 
         try {
-
-            nodeAccess.setNode(node);
-
+            if (node.isSynchronize()) {
+                validateSynchronizationSchedule(node);
+            }
+            nodeAccess.createNode(node);
             return node.getIdentifier();
         } catch (ServiceFailure ex) {
             ex.setDetail_code("4842");
@@ -213,7 +218,11 @@ public class NodeRegistryService {
         } catch (InvalidRequest ex) {
             ex.setDetail_code("4843");
             throw ex;
+        } catch (NotImplemented ex) {
+            ex.setDetail_code("4820");
+            throw ex;    
         } catch (Exception ex) {
+            ex.printStackTrace();
             log.error("Problem registering node " + node.getName(), ex);
             throw new ServiceFailure("4842", ex.getMessage());
         }
@@ -226,6 +235,7 @@ public class NodeRegistryService {
      *
      * If the node already exists, then an IdentifierNotUnique exception MUST be returned.
      *
+     * @author waltz
      * @param NodeReference The Node Identifier to be updated
      * @param Node The Node to be modified
      * @return true upon success
@@ -237,8 +247,26 @@ public class NodeRegistryService {
      */
 
     public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
-        nodeAccess.setNode(node);
+        try {
+        if (node.isSynchronize()) {
+            validateSynchronizationSchedule(node);
+        }
+        nodeAccess.updateNode(node);
         return true;
+        } catch (ServiceFailure ex) {
+            ex.setDetail_code("4822");
+            throw ex;
+        } catch (InvalidRequest ex) {
+            ex.setDetail_code("4823");
+            throw ex;
+        } catch (NotFound ex) {
+            ex.setDetail_code("4824");
+            throw ex;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            log.error("Problem registering node " + node.getName(), ex);
+            throw new ServiceFailure("4842", ex.getMessage());
+        }
     }
     /*
      * TODO: completed details of this function as a service representation
@@ -246,7 +274,7 @@ public class NodeRegistryService {
      * Remove a registered node from the system. Only nodes marked as unapproved
      * should be removed. Only administrators should be able to execute.
      *
-     *
+     * @author waltz
      * @param NodeReference The Node Identifier to be removed
      * @return true upon success (?)
      * @throws ServiceFailure
@@ -282,6 +310,7 @@ public class NodeRegistryService {
      *
      * Approve a registered node of the system. Only administrators should be able to execute.
      * 
+     * @author waltz
      * @param NodeReference The Node Identifier to be approved
      * @return true upon success (?)
      * @throws ServiceFailure
@@ -290,6 +319,43 @@ public class NodeRegistryService {
 
     public void approveNode(NodeReference nodeReference) throws ServiceFailure {
         nodeAccess.setNodeApproved(nodeReference, Boolean.TRUE);
+
+    }
+    /*
+     * There are certain rules that make for a valid schedule.
+     * 
+     * Currently, the only d1 restriction apart from the quartz 
+     * specification is that seconds may only be a digit between 0 and 60. 
+     * 
+     * 
+     * @author waltz
+     * @see http://quartz-scheduler.org/api/2.1.0/org/quartz/CronExpression.html
+     */
+    private void validateSynchronizationSchedule(Node node) throws InvalidRequest {
+        if (node.getSynchronization() == null) {
+            throw new InvalidRequest("-1", "If the node has synchronization attribute set to true, then the node should include the Synchronization element");
+        }
+        
+        String seconds = node.getSynchronization().getSchedule().getSec().replace(" ", "");
+        String minutes = node.getSynchronization().getSchedule().getMin().replace(" ", "");
+        String hours =node.getSynchronization().getSchedule().getHour().replace(" ", "");
+        String dayOfMonth = node.getSynchronization().getSchedule().getMday().replace(" ", "");
+        String month = node.getSynchronization().getSchedule().getMon().replace(" ", "");
+        String dayOfWeek = node.getSynchronization().getSchedule().getWday().replace(" ", "");
+        String year = node.getSynchronization().getSchedule().getYear().replace(" ", "");
+        try {
+            Integer secondsInteger = Integer.parseInt(seconds);
+            if (secondsInteger == null || secondsInteger <0 || secondsInteger >= 60) {
+                throw new InvalidRequest("-1", "seconds:" + seconds + " must be between 0 and 59");
+            }
+        } catch (NumberFormatException ex) {
+            throw new InvalidRequest("-1", "seconds:" + seconds + " must be an integer between 0 and 59");
+        }
+        String crontabExpression = seconds + " " + minutes + " " + hours  + " " + 
+                dayOfMonth + " " + month + " " + dayOfWeek + " " + year;
+        if (!CronExpression.isValidExpression(crontabExpression)) {
+            throw new InvalidRequest("-1", "Not a valid synchronization schedule");
+        }
 
     }
 }

@@ -13,7 +13,7 @@
     <identifier>test</identifier>
     <name>localhost-test-1</name>
     <description>Nasty Localhost Test Member node</description>
-    <baseURL>https://localhost:8080/mn</baseURL>
+    <baseURL>https://register.nowhere.com/badmn</baseURL>
     <services>
         <service name="MNCore" version="v1" available="true"/>
         <service name="MNRead" version="v1" available="true"/>
