@@ -13,7 +13,7 @@
     <identifier>urn:node:testcn</identifier>
     <name>localhost-cntest-1</name>
     <description>Nowhere Test Member node</description>
-    <baseURL>https://nowhere.com/cn</baseURL>
+    <baseURL>https://register.nowhere.com/cn</baseURL>
     <services>
         <service name="CNCore" version="v1" available="true"/>
         <service name="CNRead" version="v1" available="true"/>

@@ -936,8 +936,8 @@ public class NodeAccess extends LDAPService {
                         Attribute d1NodeSynSchdSec = new BasicAttribute("d1NodeSynSchdSec", node.getSynchronization().getSchedule().getSec());
                         modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeSynSchdSec));
 
-                        Attribute d1odeSynSchdMin = new BasicAttribute("d1NodeSynSchdMin", node.getSynchronization().getSchedule().getMin());
-                        modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, d1odeSynSchdMin));
+                        Attribute d1NodeSynSchdMin = new BasicAttribute("d1NodeSynSchdMin", node.getSynchronization().getSchedule().getMin());
+                        modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeSynSchdMin));
 
                         Attribute d1NodeSynSchdHour = new BasicAttribute("d1NodeSynSchdHour", node.getSynchronization().getSchedule().getHour());
                         modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeSynSchdHour));
@@ -1069,9 +1069,8 @@ public class NodeAccess extends LDAPService {
             throw new ServiceFailure("4801", "Could not approve node: " + nodeIdentifier + " " + e.getMessage());
         }
     }
-
     /**
-     * create or update a DataONE Node
+     * create a DataONE Node
      *
      *
      * @param node
@@ -1081,85 +1080,97 @@ public class NodeAccess extends LDAPService {
      * @throws NotFound
      * 
      */
-    public void setNode(Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
+    public void createNode(Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
         String dnNodeIdentifier = buildNodeDN(node.getIdentifier());
+
         try {
             DirContext ctx = getContext();
-            ctx.lookup(dnNodeIdentifier);
-            // got this far, must be a valid entry, so update
-            try {
-                NodeReference nodeid = node.getIdentifier();
-                String nodeDn = buildNodeDN(nodeid);
-                HashMap<String, NamingEnumeration> attributesMap = buildNodeAttributeMap(nodeDn);
-                List<ModificationItem> modificationItemList = mapNodeModificationItemList(attributesMap, node);
-                ModificationItem[] modificationArray = new ModificationItem[modificationItemList.size()];
-                modificationArray = modificationItemList.toArray(modificationArray);
-                ctx.modifyAttributes(nodeDn, modificationArray);
-
-                // easiest to remove existingServices and then adding the new ones back
-                List<Service> existingNodeServices = nodeServicesAccess.getServiceList(nodeid.getValue());
-                if ((existingNodeServices != null) && !(existingNodeServices.isEmpty())) {
-                    for (Service removeService : existingNodeServices) {
-                        String d1NodeServiceId = nodeServicesAccess.buildNodeServiceId(removeService);
-                        List<ServiceMethodRestriction> serviceMethodRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(nodeid.getValue(), d1NodeServiceId);
-                        if ((serviceMethodRestrictionList != null) && !(serviceMethodRestrictionList.isEmpty())) {
-                            for (ServiceMethodRestriction removeServiceMethodRestriction : serviceMethodRestrictionList) {
-                                serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(nodeid, removeService, removeServiceMethodRestriction);
-                            }
-                        }
-                        nodeServicesAccess.deleteNodeService(nodeid, removeService);
-                    }
-                }
-                if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
-                    for (Service service : node.getServices().getServiceList()) {
-                        String serviceDN = nodeServicesAccess.buildNodeServiceDN(node.getIdentifier(), service);
-                        Attributes serviceAttributes = nodeServicesAccess.mapNodeServiceAttributes(node, service);
-                        ctx.createSubcontext(serviceDN, serviceAttributes);
-                        log.trace("updateNodeCapabilities Added Node Service entry " + serviceDN);
-                        if (service.getRestrictionList() != null) {
-                            for (ServiceMethodRestriction restriction : service.getRestrictionList()) {
-                                String serviceMethodRestrictionDN = serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction);
-                                Attributes serviceMethodRestrictionAttributes = serviceMethodRestrictionsAccess.mapServiceMethodRestrictionAttributes(node, service, restriction);
-                                ctx.createSubcontext(serviceMethodRestrictionDN, serviceMethodRestrictionAttributes);
-                                log.trace("updateNodeCapabilities Added Service Method Restriction entry " + serviceMethodRestrictionDN);
-                            }
+            Attributes nodeAttributes = mapNodeAttributes(node);
+            ctx.createSubcontext(dnNodeIdentifier, nodeAttributes);
+            log.debug("Added Node entry " + dnNodeIdentifier);
+            if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
+                for (Service service : node.getServices().getServiceList()) {
+                    String serviceDN = nodeServicesAccess.buildNodeServiceDN(node.getIdentifier(), service);
+                    Attributes serviceAttributes = nodeServicesAccess.mapNodeServiceAttributes(node, service);
+                    ctx.createSubcontext(serviceDN, serviceAttributes);
+                    log.debug("Added Node Service entry " + serviceDN);
+                    if ((service.getRestrictionList() != null) && (service.getRestrictionList().size() > 0)) {
+                        for (ServiceMethodRestriction restriction : service.getRestrictionList()) {
+                            String serviceMethodRestrictionDN = serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction);
+                            Attributes serviceMethodRestrictionAttributes = serviceMethodRestrictionsAccess.mapServiceMethodRestrictionAttributes(node, service, restriction);
+                            ctx.createSubcontext(serviceMethodRestrictionDN, serviceMethodRestrictionAttributes);
+                            log.debug("Added Service Method Restriction entry " + serviceMethodRestrictionDN);
                         }
                     }
                 }
-                log.debug("Updated NodeCapabilities Node: " + nodeDn);
-            } catch (NamingException ex1) {
-                ex1.printStackTrace();
-                throw new ServiceFailure("0", "updateNodeCapabilities failed " + ex1.getMessage());
             }
-        } catch (NamingException ex) {
-            // NamingException hopefully means that it does not exist, so try a create
-            try {
-                DirContext ctx = getContext();
-                Attributes nodeAttributes = mapNodeAttributes(node);
-                ctx.createSubcontext(dnNodeIdentifier, nodeAttributes);
-                log.debug("Added Node entry " + dnNodeIdentifier);
-                if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
-                    for (Service service : node.getServices().getServiceList()) {
-                        String serviceDN = nodeServicesAccess.buildNodeServiceDN(node.getIdentifier(), service);
-                        Attributes serviceAttributes = nodeServicesAccess.mapNodeServiceAttributes(node, service);
-                        ctx.createSubcontext(serviceDN, serviceAttributes);
-                        log.debug("Added Node Service entry " + serviceDN);
-                        if ((service.getRestrictionList() != null) && (service.getRestrictionList().size() > 0)) {
-                            for (ServiceMethodRestriction restriction : service.getRestrictionList()) {
-                                String serviceMethodRestrictionDN = serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction);
-                                Attributes serviceMethodRestrictionAttributes = serviceMethodRestrictionsAccess.mapServiceMethodRestrictionAttributes(node, service, restriction);
-                                ctx.createSubcontext(serviceMethodRestrictionDN, serviceMethodRestrictionAttributes);
-                                log.debug("Added Service Method Restriction entry " + serviceMethodRestrictionDN);
-                            }
-                        }
-                    }
-                }
-            } catch (NamingException ex1) {
-                ex1.printStackTrace();
-                throw new ServiceFailure("0", "Register failed due to LDAP communication failure");
-            }
+        } catch (NamingException ex1) {
+            ex1.printStackTrace();
+            throw new ServiceFailure("0", "Register failed due to LDAP communication failure");
         }
 
+    }
+    /**
+     * update a DataONE Node
+     *
+     *
+     * @param node
+     * @throws ServiceFailure
+     * @throws NotImplemented
+     * @throws InvalidRequest
+     * @throws NotFound
+     * 
+     */
+    public void updateNode(Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
+
+        try {
+            DirContext ctx = getContext();
+            NodeReference nodeid = node.getIdentifier();
+            String nodeDn = buildNodeDN(nodeid);
+            HashMap<String, NamingEnumeration> attributesMap = buildNodeAttributeMap(nodeDn);
+            List<ModificationItem> modificationItemList = mapNodeModificationItemList(attributesMap, node);
+            ModificationItem[] modificationArray = new ModificationItem[modificationItemList.size()];
+            modificationArray = modificationItemList.toArray(modificationArray);
+            ctx.modifyAttributes(nodeDn, modificationArray);
+
+            // easiest to remove existingServices and then adding the new ones back
+            List<Service> existingNodeServices = nodeServicesAccess.getServiceList(nodeid.getValue());
+            if ((existingNodeServices != null) && !(existingNodeServices.isEmpty())) {
+                for (Service removeService : existingNodeServices) {
+                    String d1NodeServiceId = nodeServicesAccess.buildNodeServiceId(removeService);
+                    List<ServiceMethodRestriction> serviceMethodRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(nodeid.getValue(), d1NodeServiceId);
+                    if ((serviceMethodRestrictionList != null) && !(serviceMethodRestrictionList.isEmpty())) {
+                        for (ServiceMethodRestriction removeServiceMethodRestriction : serviceMethodRestrictionList) {
+                            serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(nodeid, removeService, removeServiceMethodRestriction);
+                        }
+                    }
+                    nodeServicesAccess.deleteNodeService(nodeid, removeService);
+                }
+            }
+            // add in the services
+            if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
+                for (Service service : node.getServices().getServiceList()) {
+                    String serviceDN = nodeServicesAccess.buildNodeServiceDN(node.getIdentifier(), service);
+                    Attributes serviceAttributes = nodeServicesAccess.mapNodeServiceAttributes(node, service);
+                    ctx.createSubcontext(serviceDN, serviceAttributes);
+                    log.trace("updateNodeCapabilities Added Node Service entry " + serviceDN);
+                    if (service.getRestrictionList() != null) {
+                        for (ServiceMethodRestriction restriction : service.getRestrictionList()) {
+                            String serviceMethodRestrictionDN = serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction);
+                            Attributes serviceMethodRestrictionAttributes = serviceMethodRestrictionsAccess.mapServiceMethodRestrictionAttributes(node, service, restriction);
+                            ctx.createSubcontext(serviceMethodRestrictionDN, serviceMethodRestrictionAttributes);
+                            log.trace("updateNodeCapabilities Added Service Method Restriction entry " + serviceMethodRestrictionDN);
+                        }
+                    }
+                }
+            }
+            log.debug("Updated NodeCapabilities Node: " + nodeDn);
+        } catch (NamingException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("0", "updateNodeCapabilities failed due to LDAP communication failure");
+        }
+
+        
     }
 
     /**

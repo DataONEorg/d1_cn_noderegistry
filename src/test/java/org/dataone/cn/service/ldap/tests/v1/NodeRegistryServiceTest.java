@@ -45,12 +45,16 @@ import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import javax.naming.NamingException;
+import javax.naming.directory.DirContext;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
+import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
+import org.junit.Before;
 
 public class NodeRegistryServiceTest {
 
@@ -59,43 +63,28 @@ public class NodeRegistryServiceTest {
     NodeAccess nodeAccess = new NodeAccess();
     NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
     ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
-
+    LdapPopulationService ldapPopulationService = new LdapPopulationService();
     final static int SIZE = 16384;
-
+    Node testMNNode;
+    Node testCNNode;
+    Node testMNNoSynchNode;
+    @Before
+    public void removeAnyTestNodes() throws IOException, InstantiationException, IllegalAccessException, JiBXException, NamingException {
+        testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNode.xml");
+        testCNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/cnNode.xml");
+        testMNNoSynchNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeValidNoSynch.xml");
+        
+        ldapPopulationService.deleteTestNodesByName(testMNNode.getIdentifier().getValue());
+        ldapPopulationService.deleteTestNodesByName(testCNNode.getIdentifier().getValue());
+        ldapPopulationService.deleteTestNodesByName(testMNNoSynchNode.getIdentifier().getValue());
+    }
     @Test
     public void testRegisterListAndDeleteNode() throws Exception {
         List<Node> testNodeList = new ArrayList<Node>();
-        ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
-        InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/mnNode.xml");
-
-        BufferedInputStream bInputStream = new BufferedInputStream(is);
-        byte[] barray = new byte[SIZE];
-        int nRead = 0;
-        while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
-            mnNodeOutput.write(barray, 0, nRead);
-        }
-        bInputStream.close();
-        ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
-        Node testMNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
 
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
         assertNotNull(mnNodeReference);
         testNodeList.add(testMNNode);
-
-
-        ByteArrayOutputStream cnNodeOutput = new ByteArrayOutputStream();
-        is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/cnNode.xml");
-
-        bInputStream = new BufferedInputStream(is);
-        barray = new byte[SIZE];
-        nRead = 0;
-        while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
-            cnNodeOutput.write(barray, 0, nRead);
-        }
-        bInputStream.close();
-        bArrayInputStream = new ByteArrayInputStream(cnNodeOutput.toByteArray());
-        Node testCNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
-
 
         NodeReference cnNodeReference = nodeRegistryService.register(testCNNode);
         testCNNode.setIdentifier(cnNodeReference);
@@ -176,29 +165,47 @@ public class NodeRegistryServiceTest {
             nodeAccess.deleteNode(node.getIdentifier());
         }
     }
-
+    @Test
+    public void testRegisterNoSyncMNNode() throws Exception {
+        // This should be able to register without error, that is all
+        NodeReference cnNodeReference = nodeRegistryService.register(testMNNoSynchNode);
+        ldapPopulationService.deleteTestNodesByName(testMNNoSynchNode.getIdentifier().getValue());
+    }
     @Test(expected=InvalidRequest.class)
-    public void testRegisterBadLocalhostNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest  {
-        ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
-        InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/mnBadLocalhostNode.xml");
-
-        BufferedInputStream bInputStream = new BufferedInputStream(is);
-        byte[] barray = new byte[SIZE];
-        int nRead = 0;
-        while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
-            mnNodeOutput.write(barray, 0, nRead);
-        }
-        bInputStream.close();
-        ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
-        Node testMNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+    public void testRegisterBadLocalhostNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented  {
+        Node testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnBadLocalhostNode.xml");
 
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
 
     }
     @Test(expected=InvalidRequest.class)
-    public void testRegisterBadNodeId() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest  {
+    public void testRegisterBadNodeId() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented  {
+
+        Node testMNNode =buildTestNode("/org/dataone/cn/resources/samples/v1/mnBadNodeId.xml");
+
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
+
+    }
+    @Test(expected=InvalidRequest.class)
+    public void testRegisterBadSyncNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented  {
+
+        Node testMNNode =buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeFailOnSynchronization.xml");
+
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
+
+    } 
+    @Test(expected=InvalidRequest.class)
+    public void testRegisterBadSyncScheduleNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented  {
+
+        Node testMNNode =buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeFailOnSchedule.xml");
+
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
+
+    }
+   
+    private Node buildTestNode(String resourcePath) throws IOException, InstantiationException, IllegalAccessException, JiBXException {
         ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
-        InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/mnBadNodeId.xml");
+        InputStream is = this.getClass().getResourceAsStream(resourcePath);
 
         BufferedInputStream bInputStream = new BufferedInputStream(is);
         byte[] barray = new byte[SIZE];
@@ -208,9 +215,7 @@ public class NodeRegistryServiceTest {
         }
         bInputStream.close();
         ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
-        Node testMNNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
-
-        NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
-
+        Node testNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+        return testNode;
     }
 }
