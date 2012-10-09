@@ -953,7 +953,12 @@ public class NodeAccess extends LDAPService {
 
                         Attribute d1NodeSynSchdYear = new BasicAttribute("d1NodeSynSchdYear", node.getSynchronization().getSchedule().getYear());
                         modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeSynSchdYear));
-
+                        
+                        Attribute d1NodeLastHarvested = new BasicAttribute("d1NodeLastHarvested", "1900-01-01T00:00:00Z");
+                        modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeLastHarvested));
+                        
+                        Attribute d1NodeLastCompleteHarvest = new BasicAttribute("d1NodeLastCompleteHarvest", "1900-01-01T00:00:00Z");
+                        modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeLastCompleteHarvest));
                     }
                 }
 
