@@ -22,6 +22,7 @@
 
 package org.dataone.service.cn.impl.v1;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -358,4 +359,8 @@ public class NodeRegistryService {
         }
 
     }
+    public void setDateLastHarvested (NodeReference nodeReference, Date lastModifiedDate) throws ServiceFailure {
+         nodeAccess.setDateLastHarvested(nodeReference, lastModifiedDate);
+    }
+    
 }
