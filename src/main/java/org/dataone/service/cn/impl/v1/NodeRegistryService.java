@@ -359,8 +359,9 @@ public class NodeRegistryService {
         }
 
     }
-    public void setDateLastHarvested (NodeReference nodeReference, Date lastModifiedDate) throws ServiceFailure {
-         nodeAccess.setDateLastHarvested(nodeReference, lastModifiedDate);
+
+    public static NodeAccess getNodeAccess() {
+        return nodeAccess;
     }
-    
+
 }
