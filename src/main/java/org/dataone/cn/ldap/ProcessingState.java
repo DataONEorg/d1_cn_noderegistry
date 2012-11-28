@@ -30,7 +30,7 @@ import java.io.Serializable;
  */
 public enum ProcessingState implements Serializable {
 
-    Offline("offline"), Recovery("recovery"), Active("active");
+    Offline("offline"), Recovery("recovery"), Active("active"), Unknown("unknown");
     private static final long serialVersionUID = 10000000;
     private final String value;
 
@@ -48,6 +48,6 @@ public enum ProcessingState implements Serializable {
                 return inst;
             }
         }
-        return null;
+        return ProcessingState.Unknown;
     }
 }
