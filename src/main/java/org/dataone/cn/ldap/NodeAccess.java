@@ -351,8 +351,59 @@ public class NodeAccess extends LDAPService {
         }
 
         return this.mapNode(attributesMap);
-    }
 
+
+    }
+    /**
+     * determine if an Administrator has approved the node after it was registered,
+     * Then return the node if it is approved, otherwise throw a NotFound exception
+     *
+     * @param nodeIdentifier
+     * @return Boolean
+     * @throws ServiceFailure
+     * 
+     */
+    public Node getApprovedNode(String nodeIdentifier) throws ServiceFailure, NotFound {
+        Boolean nodeApproved = false;
+        HashMap<String, NamingEnumeration> attributesMap;
+        try {
+            attributesMap = buildNodeAttributeMap(nodeIdentifier);
+        } catch (NameNotFoundException e) {
+            throw new NotFound("4801", nodeIdentifier + " not found on the server");
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("buildNodeAttributeMap- Problem determining approved state " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "buildNodeAttributeMap- Could not determine approved state of : " + nodeIdentifier + " " + e.getMessage());
+        }
+        if (attributesMap.isEmpty()) {
+            throw new NotFound("4801", nodeIdentifier + " not found on the server");
+        }
+        if (attributesMap.containsKey(NodeApprovedAttribute.toLowerCase())) {
+            try {
+                nodeApproved = Boolean.getBoolean(getEnumerationValueString(attributesMap.get(NodeApprovedAttribute.toLowerCase())));
+            } catch (Exception e) {
+                e.printStackTrace();
+                log.error("getEnumerationValueString- Problem determining approved state " + nodeIdentifier, e);
+                throw new ServiceFailure("4801", "getEnumerationValueString- Could not determine approved state of : " + nodeIdentifier + " " + e.getMessage());
+            }
+        } else {
+            log.error("attributesMap.containsKey- Problem determining approved state " + nodeIdentifier);
+            throw new ServiceFailure("4801", "attributesMap.containsKey- Could not determine approved state of : " + nodeIdentifier);   
+        }
+
+
+        if (!nodeApproved) {
+            throw new NotFound("4801", nodeIdentifier + " not approved on the server");
+        }
+        try {
+            return this.mapNode(attributesMap);
+        } catch (NameNotFoundException ex) {
+            log.warn("Node not found: " + nodeIdentifier);
+            throw new NotFound("4842", ex.getMessage());
+        } catch (NamingException ex) {
+            throw new ServiceFailure("4842", ex.getMessage());
+        }
+    }
     /**
      * determine if an Administrator has approved the node after it was registered
      *
