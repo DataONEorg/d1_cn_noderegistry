@@ -36,6 +36,19 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import java.io.InputStream;
+import javax.naming.ldap.Control;
+import javax.naming.ldap.LdapContext;
+import org.apache.directory.server.annotations.CreateLdapServer;
+import org.apache.directory.server.annotations.CreateTransport;
+import org.apache.directory.server.core.annotations.ApplyLdifFiles;
+import org.apache.directory.server.core.annotations.CreateAuthenticator;
+import org.apache.directory.server.core.annotations.CreateDS;
+import org.apache.directory.server.core.annotations.CreatePartition;
+import org.apache.directory.server.core.authn.SimpleAuthenticator;
+import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
+import static org.apache.directory.server.core.integ.AbstractLdapTestUnit.ldapServer;
+import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.integ.ServerIntegrationUtils;
 import org.apache.log4j.Logger;
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.exceptions.ServiceFailure;
@@ -48,12 +61,17 @@ import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.junit.Before;
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
 
 /**
  *
  * @author waltz
  */
-public class HazelcastLdapStoreTest {
+@RunWith(FrameworkRunner.class)
+@CreateDS(allowAnonAccess = false, enableAccessControl=true,  authenticators ={@CreateAuthenticator(type = SimpleAuthenticator.class)} ,name = "org", partitions = { @CreatePartition(name = "org", suffix = "dc=org") })
+@ApplyLdifFiles({"org/dataone/test/apache/directory/server/dataone-schema.ldif", "org/dataone/test/apache/directory/server/dataone-base-data.ldif"})
+@CreateLdapServer(transports = { @CreateTransport(protocol = "LDAP", port=11389) })
+public class HazelcastLdapStoreTest extends AbstractLdapTestUnit {
 
     static Logger logger = Logger.getLogger(HazelcastLdapStoreTest.class);
     private HazelcastInstance hazelcastInstance;
@@ -73,6 +91,19 @@ public class HazelcastLdapStoreTest {
      */
     @Before
     public void before() throws Exception {
+        int ldapTimeoutCount = 0;
+        while (!ldapServer.isStarted() && ldapTimeoutCount < 10) {
+            Thread.sleep(500L);
+            logger.info("LdapServer is not yet started");
+            ldapTimeoutCount++;
+        }
+        if (!ldapServer.isStarted()) {
+                throw new IllegalStateException("Service is not running");
+        }
+        final LdapContext ctx = ServerIntegrationUtils.getWiredContext(
+				ldapServer, null);
+        ctx.lookup("dc=dataone,dc=org");
+
         if (hazelcastInstance == null) {
             InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/service/ldap/tests/config/hazelcast.xml");
 
@@ -80,7 +111,7 @@ public class HazelcastLdapStoreTest {
 
             hazelcastInstance = Hazelcast.newHazelcastInstance(configBuilder.build());
         }
-
+        
     }
 
     @Test

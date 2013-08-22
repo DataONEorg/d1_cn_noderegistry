@@ -29,12 +29,12 @@ import org.dataone.service.types.v1.Node;
 import java.util.ArrayList;
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.util.TypeMarshaller;
-import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.service.types.v1.NodeList;
 import org.jibx.runtime.JiBXException;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
@@ -43,14 +43,28 @@ import java.io.ByteArrayOutputStream;
 import java.util.Date;
 import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
+import org.apache.directory.server.annotations.CreateLdapServer;
+import org.apache.directory.server.annotations.CreateTransport;
+import org.apache.directory.server.core.annotations.ApplyLdifFiles;
+import org.apache.directory.server.core.annotations.CreateAuthenticator;
+import org.apache.directory.server.core.annotations.CreateDS;
+import org.apache.directory.server.core.annotations.CreatePartition;
+import org.apache.directory.server.core.authn.SimpleAuthenticator;
+import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
+import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.types.v1.*;
 import org.junit.Before;
+import org.junit.runner.RunWith;
 
-public class NodeRegistryServiceTest {
+@RunWith(FrameworkRunner.class)
+@CreateDS(allowAnonAccess = false, enableAccessControl=true,  authenticators ={@CreateAuthenticator(type = SimpleAuthenticator.class)} ,name = "org", partitions = { @CreatePartition(name = "org", suffix = "dc=org") })
+@ApplyLdifFiles({"org/dataone/test/apache/directory/server/dataone-schema.ldif", "org/dataone/test/apache/directory/server/dataone-base-data.ldif"})
+@CreateLdapServer(transports = { @CreateTransport(protocol = "LDAP", port=11389) })
+public class NodeRegistryServiceTest extends AbstractLdapTestUnit {
     
     public static Log log = LogFactory.getLog(NodeRegistryServiceTest.class);
     NodeRegistryService nodeRegistryService = new NodeRegistryService();
@@ -100,9 +114,9 @@ public class NodeRegistryServiceTest {
         }
         try {
             NodeList nodeList = nodeRegistryService.listNodes();
-            Assert.assertNotNull(nodeList);
+            
             // serialize it and validate it
-            Assert.assertTrue(nodeList.sizeNodeList() >= 2);
+            assertTrue(nodeList.sizeNodeList() >= 2);
             boolean foundTestCNNode = false;
             boolean foundTestCNIdentity = false;
             boolean foundTestCNRestriction = false;
@@ -110,11 +124,11 @@ public class NodeRegistryServiceTest {
                 if (node.getName().equals("localhost-cntest-1")) {
                     foundTestCNNode = true;
                     Services services = node.getServices();
-                    Assert.assertTrue(services.sizeServiceList() > 0);
+                    assertTrue(services.sizeServiceList() > 0);
                     for (Service service : services.getServiceList()) {
                         if (service.getName().equals("CNIdentity")) {
                             foundTestCNIdentity = true;
-                            Assert.assertTrue(service.sizeRestrictionList() > 0);
+                            assertTrue(service.sizeRestrictionList() > 0);
                             for (ServiceMethodRestriction restrict : service.getRestrictionList()) {
                                 if (restrict.getMethodName().equals("mapIdentity")) {
                                     foundTestCNRestriction = true;
@@ -125,9 +139,9 @@ public class NodeRegistryServiceTest {
                     }
                 }
             }
-            Assert.assertTrue(foundTestCNNode);
-            Assert.assertTrue(foundTestCNIdentity);
-            Assert.assertTrue(foundTestCNRestriction);
+            assertTrue(foundTestCNNode);
+            assertTrue(foundTestCNIdentity);
+            assertTrue(foundTestCNRestriction);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             TypeMarshaller.marshalTypeToOutputStream(nodeList, outputStream);
             String nodeListString = new String(outputStream.toByteArray());
@@ -192,6 +206,7 @@ public class NodeRegistryServiceTest {
         mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
         try {
             assertTrue(mnRegisteredNode.getSynchronization().getSchedule() != null);
+            assertTrue(mnRegisteredNode.isSynchronize());
         } catch (NullPointerException ex) {
             fail("Test misconfiguration " + ex);
         }

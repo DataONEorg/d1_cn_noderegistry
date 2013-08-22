@@ -65,7 +65,7 @@ public class HazelcastLdapStore implements MapLoader, MapStore {
     public Object load(Object key) {
         Node node = null;
         try {
-            node = nodeRegistry.getNode((NodeReference) key);
+            node = nodeRegistry.getApprovedNode((NodeReference) key);
         } catch (NotFound ex) {
             log.warn(ex.serialize(NotImplemented.FMT_XML));
         } catch (ServiceFailure ex) {

@@ -78,8 +78,8 @@ public class NodeRegistryService {
     private static NodeAccess nodeAccess = new NodeAccess();
     private static NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
     private static ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
-    static final Pattern excludeNodeBaseURLPattern = Pattern.compile("^https?\\:\\/\\/(?:(?:localhost(?:\\:8080)?\\/)|(?:127\\.0)).+");
-    static final Pattern validNodeIdPattern = Pattern.compile(Settings.getConfiguration().getString("cn.nodeId.validation"));
+    static Pattern excludeNodeBaseURLPattern = Pattern.compile("^https?\\:\\/\\/(?:(?:localhost(?:\\:8080)?\\/)|(?:127\\.0)).+");
+    static Pattern validNodeIdPattern = Pattern.compile(Settings.getConfiguration().getString("cn.nodeId.validation"));
 
     /*
      * Retreive a list of nodes that have been registered and approved
@@ -122,7 +122,7 @@ public class NodeRegistryService {
     }
     /*
      * Retreive a node that have been registered
-     * with the DataONE infrastructure.
+     * within the DataONE infrastructure.
      *
      * @author waltz
      * @param NodeReference The Node Identifier to be retreived
@@ -158,6 +158,40 @@ public class NodeRegistryService {
             services.setServiceList(serviceList);
             node.setServices(services);
 
+        }
+
+        return node;
+    }
+    /*
+     * Retreive a node that have been registered and approved
+     * within the DataONE infrastructure.
+     *
+     * @author waltz
+     * @param NodeReference The Node Identifier to be retreived
+     * @return a DataONE Node
+     * @throws ServiceFailure
+     * @throws NotFound
+     * 
+     */
+
+    public Node getApprovedNode(NodeReference nodeIdentifier) throws ServiceFailure, NotFound {
+
+        String dnNodeIdentifier = nodeAccess.buildNodeDN(nodeIdentifier);
+        Node node = null;
+
+        node = nodeAccess.getApprovedNode(dnNodeIdentifier);
+
+        log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
+        List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier.getValue());
+        if (!serviceList.isEmpty()) {
+            for (Service service : serviceList) {
+                String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
+
+                service.setRestrictionList(serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(node.getIdentifier().getValue(), nodeServiceId));
+            }
+            Services services = new Services();
+            services.setServiceList(serviceList);
+            node.setServices(services);
         }
 
         return node;
