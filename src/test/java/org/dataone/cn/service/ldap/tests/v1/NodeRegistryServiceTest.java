@@ -112,6 +112,17 @@ public class NodeRegistryServiceTest extends AbstractLdapTestUnit {
             
             nodeAccess.setNodeApproved(node.getIdentifier(), Boolean.TRUE);
         }
+        for (Node node : testNodeList) {
+            
+            Boolean nodeAggregateLogs = nodeAccess.getAggregateLogs(node.getIdentifier());
+            assertTrue(nodeAggregateLogs);
+            nodeAccess.setAggregateLogs(node.getIdentifier(), false);
+        }
+        for (Node node : testNodeList) {
+            
+            Boolean nodeAggregateLogs = nodeAccess.getAggregateLogs(node.getIdentifier());
+            assertFalse(nodeAggregateLogs);
+        }
         try {
             NodeList nodeList = nodeRegistryService.listNodes();
             

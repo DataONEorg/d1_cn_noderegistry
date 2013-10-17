@@ -69,6 +69,7 @@ public class NodeAccess extends LDAPService {
     public static Log log = LogFactory.getLog(NodeAccess.class);
     public static final String ProcessingStateAttribute = "d1NodeProcessingState";
     public static final String LogLastAggregatedAttribute = "d1NodeLogLastAggregated";
+    public static final String AggregateLogsAttribute = "d1NodeAggregateLogs";
     public static final String NodeApprovedAttribute = "d1NodeApproved";
     private static NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
     private static ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
@@ -380,7 +381,7 @@ public class NodeAccess extends LDAPService {
         }
         if (attributesMap.containsKey(NodeApprovedAttribute.toLowerCase())) {
             try {
-                nodeApproved = Boolean.getBoolean(getEnumerationValueString(attributesMap.get(NodeApprovedAttribute.toLowerCase())));
+                nodeApproved = Boolean.valueOf(getEnumerationValueString(attributesMap.get(NodeApprovedAttribute.toLowerCase())));
             } catch (Exception e) {
                 e.printStackTrace();
                 log.error("getEnumerationValueString- Problem determining approved state " + nodeIdentifier, e);
@@ -417,7 +418,9 @@ public class NodeAccess extends LDAPService {
         try {
             HashMap<String, NamingEnumeration> attributesMap = buildNodeAttributeMap(buildNodeDN(nodeIdentifier));
             if (attributesMap.containsKey(NodeApprovedAttribute.toLowerCase())) {
-                nodeApproved = Boolean.getBoolean(getEnumerationValueString(attributesMap.get(NodeApprovedAttribute.toLowerCase())));
+                String nodeApprovedStr = getEnumerationValueString(attributesMap.get(NodeApprovedAttribute.toLowerCase()));
+                
+                nodeApproved = Boolean.valueOf(nodeApprovedStr.toLowerCase());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -555,6 +558,60 @@ public class NodeAccess extends LDAPService {
         return processingState;
     }
 
+    /**
+     * each MN Node will have a boolean associated with DataONE logAggregation
+     * The field is hidden from the nodeList, it may only be manipulated by D1 processing
+     * or a DataONE LDAP administrator
+     * 
+     * The LDAP attribute of the Node functionally a replicated lock. It works in
+     * conjuction with a java distributed lock to ensure that only a single
+     * log aggregation process at a time may be running.
+     * 
+     * The attribute may also serve as a backend mechanism to turn logAggregation
+     * off for a particular node
+     *
+     * @param nodeIdentifier
+     * @return AggregateLogs
+     * @throws ServiceFailure
+     * 
+     */
+    public Boolean getAggregateLogs(NodeReference nodeIdentifier) throws ServiceFailure {
+        // since this attribute will not be prepopulated, return true as the default
+        // it will be populated once it is set to false before the initial run
+        // of course this leaves a race condition if the first run of a node
+        // is performed during a split brain state of the cluster
+        // however, preventing logAgg from running during split brain
+        // will be dealt with in the logAgg code and not here
+        Boolean aggregateLogs = Boolean.valueOf(true);
+        try {
+            HashMap<String, NamingEnumeration> attributesMap = buildNodeAttributeMap(buildNodeDN(nodeIdentifier));
+            if (attributesMap.containsKey(AggregateLogsAttribute.toLowerCase())) {
+
+                 aggregateLogs =   Boolean.valueOf(getEnumerationValueString(attributesMap.get(AggregateLogsAttribute.toLowerCase())));
+                 log.debug("aggregateLogsString is " + aggregateLogs);
+            } else {
+                // It not exist, so create it
+ 
+                String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
+                Attribute d1NodeAggregateLogs = new BasicAttribute(AggregateLogsAttribute, Boolean.toString(aggregateLogs).toUpperCase());
+                // get a handle to an Initial DirContext
+                DirContext ctx = getContext();
+
+                // construct the list of modifications to make
+                ModificationItem[] mods = new ModificationItem[1];
+                mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeAggregateLogs);
+
+                // make the change
+                ctx.modifyAttributes(dnNodeIdentifier, mods);
+                log.debug("Initialize Aggregate Logs: " + dnNodeIdentifier);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Problem determining processing state " + nodeIdentifier + " of attribute" + AggregateLogsAttribute, e);
+            throw new ServiceFailure("4801", "Could not determine state of : " + nodeIdentifier + " of attribute " + AggregateLogsAttribute + " " + e.getMessage());
+        }
+        return aggregateLogs;
+    }
     /**
      * from the provided attributeMap returned from an LDAP query, fill out a Node
      * NodeServices are not including in this mapping
@@ -1094,7 +1151,7 @@ public class NodeAccess extends LDAPService {
     }
 
     /**
-     * update a registered DataONE Node to be approved
+     * update a registered DataONE Node to be approved (or unapproved if need be)
      *
      *
      * @param nodeIdentifier
@@ -1265,6 +1322,39 @@ public class NodeAccess extends LDAPService {
             ex.printStackTrace();
             log.error("Problem setting ProcessingState " + nodeIdentifier, ex);
             throw new ServiceFailure("4801", "Could not set Processing state: " + nodeIdentifier + " " + ex.getMessage());
+        }
+    }
+    
+    /**
+     * update the aggregate Logs Boolean on a DataONE Node
+     *
+     *
+     * @param nodeIdentifier
+     * @param aggregateLogs
+     * @throws ServiceFailure
+     * 
+     */
+    public void setAggregateLogs(NodeReference nodeIdentifier, Boolean aggregateLogs) throws ServiceFailure {
+        try {
+            String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
+            Attribute d1NodeAggregateLogs = new BasicAttribute(AggregateLogsAttribute, Boolean.toString(aggregateLogs).toUpperCase());
+            // get a handle to an Initial DirContext
+            DirContext ctx = getContext();
+
+            // construct the list of modifications to make
+            ModificationItem[] mods = new ModificationItem[1];
+            mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, d1NodeAggregateLogs);
+
+            // make the change
+            ctx.modifyAttributes(dnNodeIdentifier, mods);
+            log.debug("Set Aggregate Logs: " + dnNodeIdentifier);
+        } catch (CommunicationException ex) {
+            ex.printStackTrace();
+            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Problem Setting Aggregate Logs " + nodeIdentifier, e);
+            throw new ServiceFailure("4801", "Could not set Aggregate Logs: " + nodeIdentifier + " " + e.getMessage());
         }
     }
 }
