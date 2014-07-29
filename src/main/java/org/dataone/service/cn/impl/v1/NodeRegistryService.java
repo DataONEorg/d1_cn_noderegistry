@@ -22,6 +22,7 @@
 
 package org.dataone.service.cn.impl.v1;
 
+import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotFound;
@@ -59,6 +60,10 @@ public class NodeRegistryService {
 
     private org.dataone.service.cn.impl.v2.NodeRegistryService impl = new org.dataone.service.cn.impl.v2.NodeRegistryService();
 
+    public static NodeAccess getNodeAccess() {
+        return org.dataone.service.cn.impl.v2.NodeRegistryService.getNodeAccess();
+    }
+    
     /*
      * Retreive a list of nodes that have been registered and approved
      * with the DataONE infrastructure.
