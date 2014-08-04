@@ -22,11 +22,14 @@
 
 package org.dataone.cn.ldap;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+
 import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingEnumeration;
@@ -49,8 +52,10 @@ import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v2.Node;
 import org.dataone.service.types.v1.NodeReference;
+import org.dataone.service.types.v1.NodeReplicationPolicy;
 import org.dataone.service.types.v1.NodeState;
 import org.dataone.service.types.v1.NodeType;
+import org.dataone.service.types.v1.ObjectFormatIdentifier;
 import org.dataone.service.types.v1.Ping;
 import org.dataone.service.types.v1.Schedule;
 import org.dataone.service.types.v1.Service;
@@ -710,6 +715,37 @@ public class NodeAccess extends LDAPService {
                     ping.setLastSuccess(DateTimeMarshaller.deserializeDateToUTC(getEnumerationValueString(attributesMap.get("d1nodepingdatechecked"))));
                     node.setPing(ping);
                 }
+                
+                NodeReplicationPolicy nrp = null;
+                if (attributesMap.containsKey("d1ReplicationPolicyMaxObjectSize")) {
+                	if (nrp == null) nrp = new NodeReplicationPolicy();
+                	nrp.setMaxObjectSize(new BigInteger(getEnumerationValueString(attributesMap.get("d1ReplicationPolicyMaxObjectSize"))));
+                }
+                if (attributesMap.containsKey("d1ReplicationPolicySpaceAllocated")) {
+                	if (nrp == null) nrp = new NodeReplicationPolicy();
+                	nrp.setSpaceAllocated(new BigInteger(getEnumerationValueString(attributesMap.get("d1ReplicationPolicySpaceAllocated"))));
+                }
+                if (attributesMap.containsKey("d1ReplicationPolicyAllowedNode")) {
+                	if (nrp == null) nrp = new NodeReplicationPolicy();
+                	NamingEnumeration allowedNodes = attributesMap.get("d1ReplicationPolicyAllowedNode");
+                    while (allowedNodes.hasMore()) {
+                    	NodeReference nr = new NodeReference();
+                    	nr.setValue( (String) allowedNodes.next());
+                    	nrp.addAllowedNode(nr);
+                    }
+                }
+                if (attributesMap.containsKey("d1ReplicationPolicyAllowedObjectFormat")) {
+                	if (nrp == null) nrp = new NodeReplicationPolicy();
+                	NamingEnumeration allowedFormats = attributesMap.get("d1ReplicationPolicyAllowedObjectFormat");
+                    while (allowedFormats.hasMore()) {
+                    	ObjectFormatIdentifier formatid = new ObjectFormatIdentifier();
+                    	formatid.setValue( (String) allowedFormats.next());
+                    	nrp.addAllowedObjectFormat(formatid);
+                    }
+                }
+                if (nrp != null) {
+                	node.setNodeReplicationPolicy(nrp);
+                }
             }
         }
         return node;
@@ -784,6 +820,28 @@ public class NodeAccess extends LDAPService {
                 nodeAttributes.put(new BasicAttribute("d1NodeLastCompleteHarvest", "1900-01-01T00:00:00Z"));
             }
         }
+        
+        /* Node Replication Policy items */
+        NodeReplicationPolicy nrp = node.getNodeReplicationPolicy();
+        if (nrp != null)  {
+        	nodeAttributes.put(new BasicAttribute("d1ReplicationPolicyMaxObjectSize", nrp.getMaxObjectSize()));
+        	nodeAttributes.put(new BasicAttribute("d1ReplicationPolicySpaceAllocated", nrp.getSpaceAllocated()));
+        	if (nrp.getAllowedNodeList() != null && !nrp.getAllowedNodeList().isEmpty()) {
+        		Attribute allowedNodes = new BasicAttribute("d1ReplicationPolicyAllowedNode");
+        		for (NodeReference nr : nrp.getAllowedNodeList()) {
+        			allowedNodes.add(nr);
+        		}
+        		nodeAttributes.put(allowedNodes);
+        	}
+        	if (nrp.getAllowedObjectFormatList() != null && !nrp.getAllowedObjectFormatList().isEmpty()) {
+        		Attribute allowedFormats = new BasicAttribute("d1ReplicationPolicyAllowedObjectFormat");
+        		for (ObjectFormatIdentifier nr : nrp.getAllowedObjectFormatList()) {
+        			allowedFormats.add(nr);
+        		}
+        		nodeAttributes.put(allowedFormats);
+        	}
+        }
+ 
         return nodeAttributes;
     }
 
@@ -799,7 +857,8 @@ public class NodeAccess extends LDAPService {
      * @throws NamingException
      * 
      */
-    public List<ModificationItem> mapNodeModificationItemList(HashMap<String, NamingEnumeration> attributesMap, Node node) throws NamingException {
+    public List<ModificationItem> mapNodeModificationItemList(HashMap<String, NamingEnumeration> attributesMap, Node node) 
+    throws NamingException {
         List<ModificationItem> modificationItemList = new ArrayList<ModificationItem>();
 
         if (attributesMap.containsKey("d1nodename")) {
@@ -980,6 +1039,7 @@ public class NodeAccess extends LDAPService {
 
         }
 
+        
         if (attributesMap.containsKey("d1nodetype")) {
             NodeType nodeType = NodeType.convert(getEnumerationValueString(attributesMap.get("d1nodetype")));
 
@@ -1071,9 +1131,142 @@ public class NodeAccess extends LDAPService {
                 }
 
             }
+            
+            /* NodeReplicationPolicy elements and attributes */
+            
+            String attrLDAPname = "d1ReplicationPolicyMaxObjectSize";
+            BigInteger value = node.getNodeReplicationPolicy().getMaxObjectSize();
+            if (attributesMap.containsKey(attrLDAPname)) {
+                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
+                if (!value.toString().contentEquals(currentVal)) {
+                    Attribute attr = new BasicAttribute(attrLDAPname, value);
+                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
+                }
+
+            } else {
+                Attribute attr = new BasicAttribute(attrLDAPname, value);
+                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
+
+            }
+            
+            attrLDAPname = "d1ReplicationPolicySpaceAllocated";
+            /* BigInteger */ value = node.getNodeReplicationPolicy().getSpaceAllocated();
+            if (attributesMap.containsKey(attrLDAPname)) {
+                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
+                if (!value.toString().contentEquals(currentVal)) {
+                    Attribute attr = new BasicAttribute(attrLDAPname, value);
+                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
+                }
+
+            } else {
+                Attribute attr = new BasicAttribute(attrLDAPname, value);
+                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
+
+            }
+            
+            attrLDAPname = "d1ReplicationPolicyAllowedNode";
+            
+            List<NodeReference> existingNodeList = new ArrayList<NodeReference>();
+            if (attributesMap.containsKey(attrLDAPname)) {
+                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
+                while (currentList.hasMore()) {
+                    NodeReference nodeValue = new NodeReference();
+                    nodeValue.setValue((String) currentList.next());
+                    existingNodeList.add(nodeValue);
+
+                }
+            }
+            // Determine which attributes to add
+            // added attributes should be the items in the new subject list
+            // minus the same items in the existing list
+            List<NodeReference> additionList = new ArrayList<NodeReference>();
+            additionList.addAll(node.getNodeReplicationPolicy().getAllowedNodeList());
+
+            if (!(existingNodeList.isEmpty()) && !(additionList.isEmpty())) {
+                additionList.removeAll(existingNodeList);
+            }
+
+            if (!additionList.isEmpty()) {
+                Attribute addNodes = new BasicAttribute(attrLDAPname);
+
+                for (NodeReference addition : additionList) {
+                    addNodes.add(addition.getValue());
+                }
+                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, addNodes));
+            }
+
+            // Determine which attributes to remove
+            // removed attributes should be the items in the existing subject list
+            // minus the same items in the new subject list
+            List<NodeReference> removalList = new ArrayList<NodeReference>();
+            removalList.addAll(existingNodeList);
+            if (!(node.getNodeReplicationPolicy().getAllowedObjectFormatList().isEmpty()) && !(removalList.isEmpty())) {
+                removalList.removeAll(node.getContactSubjectList());
+            }
+
+            if (!removalList.isEmpty()) {
+                Attribute removeNodes = new BasicAttribute(attrLDAPname);
+
+                for (NodeReference removal : removalList) {
+                    removeNodes.add(removal.getValue());
+                }
+                modificationItemList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, removeNodes));
+            }
+            
+            attrLDAPname = "d1ReplicationPolicyAllowedObjectFormat";
+            
+            List<ObjectFormatIdentifier> existingFormatList = new ArrayList<ObjectFormatIdentifier>();
+            if (attributesMap.containsKey(attrLDAPname)) {
+                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
+                while (currentList.hasMore()) {
+                	ObjectFormatIdentifier formatValue = new ObjectFormatIdentifier();
+                    formatValue.setValue((String) currentList.next());
+                    existingFormatList.add(formatValue);
+
+                }
+            }
+            // Determine which attributes to add
+            // added attributes should be the items in the new subject list
+            // minus the same items in the existing list
+            List<ObjectFormatIdentifier> formatAdditionList = new ArrayList<ObjectFormatIdentifier>();
+            formatAdditionList.addAll(node.getNodeReplicationPolicy().getAllowedObjectFormatList());
+
+            if (!(existingFormatList.isEmpty()) && !(formatAdditionList.isEmpty())) {
+                formatAdditionList.removeAll(existingFormatList);
+            }
+
+            if (!formatAdditionList.isEmpty()) {
+                Attribute addFormats = new BasicAttribute(attrLDAPname);
+
+                for (ObjectFormatIdentifier addition : formatAdditionList) {
+                    addFormats.add(addition.getValue());
+                }
+                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, addFormats));
+            }
+
+            // Determine which attributes to remove
+            // removed attributes should be the items in the existing subject list
+            // minus the same items in the new subject list
+            List<ObjectFormatIdentifier> formatRemovalList = new ArrayList<ObjectFormatIdentifier>();
+            formatRemovalList.addAll(existingFormatList);
+            if (!(node.getNodeReplicationPolicy().getAllowedObjectFormatList().isEmpty()) && !(formatRemovalList.isEmpty())) {
+                formatRemovalList.removeAll(node.getContactSubjectList());
+            }
+
+            if (!formatRemovalList.isEmpty()) {
+                Attribute removeFormats = new BasicAttribute(attrLDAPname);
+
+                for (ObjectFormatIdentifier removal : formatRemovalList) {
+                    removeFormats.add(removal.getValue());
+                }
+                modificationItemList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, removeFormats));
+            }  
         }
+        
         return modificationItemList;
     }
+    
+    
 
     /**
      * update the date a Member node was last Synchronized
