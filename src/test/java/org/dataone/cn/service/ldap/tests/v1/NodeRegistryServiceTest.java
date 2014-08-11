@@ -17,32 +17,24 @@
  */
 package org.dataone.cn.service.ldap.tests.v1;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.dataone.service.exceptions.IdentifierNotUnique;
-import org.dataone.service.exceptions.InvalidRequest;
-import org.dataone.service.exceptions.ServiceFailure;
-import org.dataone.service.types.v1.NodeReference;
-import java.util.List;
-import org.dataone.service.types.v1.Node;
+import java.io.InputStream;
 import java.util.ArrayList;
-import org.dataone.service.cn.impl.v1.NodeRegistryService;
-import org.dataone.service.util.TypeMarshaller;
+import java.util.Date;
+import java.util.List;
+
+import javax.naming.NamingException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.dataone.service.types.v1.NodeList;
-import org.jibx.runtime.JiBXException;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import java.io.InputStream;
-import java.io.ByteArrayInputStream;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.util.Date;
-import javax.naming.NamingException;
-import javax.naming.directory.DirContext;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifFiles;
@@ -55,9 +47,23 @@ import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
+import org.dataone.service.cn.impl.v1.NodeRegistryService;
+import org.dataone.service.exceptions.IdentifierNotUnique;
+import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotImplemented;
-import org.dataone.service.types.v1.*;
+import org.dataone.service.exceptions.ServiceFailure;
+import org.dataone.service.types.v1.Node;
+import org.dataone.service.types.v1.NodeList;
+import org.dataone.service.types.v1.NodeReference;
+import org.dataone.service.types.v1.Schedule;
+import org.dataone.service.types.v1.Service;
+import org.dataone.service.types.v1.ServiceMethodRestriction;
+import org.dataone.service.types.v1.Services;
+import org.dataone.service.types.v1.Synchronization;
+import org.dataone.service.util.TypeMarshaller;
+import org.jibx.runtime.JiBXException;
 import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(FrameworkRunner.class)
