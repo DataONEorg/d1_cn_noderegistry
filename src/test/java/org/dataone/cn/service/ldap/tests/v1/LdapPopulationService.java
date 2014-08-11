@@ -4,13 +4,14 @@
  */
 package org.dataone.cn.service.ldap.tests.v1;
 
-import java.util.HashMap;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
-import javax.naming.directory.*;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+
 import org.dataone.cn.ldap.LDAPService;
 import org.dataone.configuration.Settings;
-import org.dataone.service.types.v1.NodeReference;
 
 /**
  *
