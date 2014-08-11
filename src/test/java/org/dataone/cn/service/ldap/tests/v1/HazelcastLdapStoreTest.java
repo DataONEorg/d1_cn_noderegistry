@@ -22,22 +22,19 @@
 
 package org.dataone.cn.service.ldap.tests.v1;
 
-import java.util.List;
-import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
-import org.dataone.cn.ldap.NodeServicesAccess;
-import org.dataone.cn.ldap.NodeAccess;
-import java.util.Set;
-import java.io.ByteArrayInputStream;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import org.dataone.service.types.v1.NodeReference;
-import com.hazelcast.config.XmlConfigBuilder;
-import com.hazelcast.core.Hazelcast;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import java.io.InputStream;
-import javax.naming.ldap.Control;
+import java.util.List;
+import java.util.Set;
+
 import javax.naming.ldap.LdapContext;
+
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifFiles;
@@ -46,22 +43,29 @@ import org.apache.directory.server.core.annotations.CreateDS;
 import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.authn.SimpleAuthenticator;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
-import static org.apache.directory.server.core.integ.AbstractLdapTestUnit.ldapServer;
 import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.apache.directory.server.integ.ServerIntegrationUtils;
 import org.apache.log4j.Logger;
+import org.dataone.cn.ldap.NodeAccess;
+import org.dataone.cn.ldap.NodeServicesAccess;
+import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.exceptions.ServiceFailure;
-import org.dataone.service.util.TypeMarshaller;
-import org.junit.Test;
 import org.dataone.service.types.v1.Node;
-import org.dataone.service.types.v1.Services;
+import org.dataone.service.types.v1.NodeReference;
 import org.dataone.service.types.v1.Service;
-import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
+import org.dataone.service.types.v1.Services;
+import org.dataone.service.types.v1.Subject;
+import org.dataone.service.util.TypeMarshaller;
 import org.junit.Before;
-import static org.junit.Assert.*;
+import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.hazelcast.config.XmlConfigBuilder;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IMap;
 
 /**
  *
@@ -132,7 +136,7 @@ public class HazelcastLdapStoreTest extends AbstractLdapTestUnit {
             ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
             Node testNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
 
-            IMap<NodeReference, Node> d1NodesMap = hazelcastInstance.getMap("hzNodes");
+            IMap<NodeReference, org.dataone.service.types.v2.Node> d1NodesMap = hazelcastInstance.getMap("hzNodes");
 
             Node nullnode = d1NodesMap.get(nodeReference);
             assertNull(nullnode);
@@ -149,7 +153,7 @@ public class HazelcastLdapStoreTest extends AbstractLdapTestUnit {
             testNode.addContactSubject(contactSubject3);
             testNode.addSubject(contactSubject3);
             d1NodesMap.get(nodeReference);
-            d1NodesMap.put(nodeReference, testNode);
+            d1NodesMap.put(nodeReference, TypeMarshaller.convertTypeFromType(testNode, org.dataone.service.types.v2.Node.class));
 
             Node node = d1NodesMap.get(nodeReference);
             assertTrue(node.isReplicate() == false);
