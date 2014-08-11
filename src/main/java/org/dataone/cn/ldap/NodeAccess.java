@@ -1133,134 +1133,136 @@ public class NodeAccess extends LDAPService {
             }
             
             /* NodeReplicationPolicy elements and attributes */
+            if (node.getNodeReplicationPolicy() != null) {
             
-            String attrLDAPname = "d1ReplicationPolicyMaxObjectSize";
-            BigInteger value = node.getNodeReplicationPolicy().getMaxObjectSize();
-            if (attributesMap.containsKey(attrLDAPname)) {
-                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
-                if (!value.toString().contentEquals(currentVal)) {
-                    Attribute attr = new BasicAttribute(attrLDAPname, value);
-                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
-                }
-
-            } else {
-                Attribute attr = new BasicAttribute(attrLDAPname, value);
-                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
-
+	            String attrLDAPname = "d1ReplicationPolicyMaxObjectSize";
+	            BigInteger value = node.getNodeReplicationPolicy().getMaxObjectSize();
+	            if (attributesMap.containsKey(attrLDAPname)) {
+	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
+	                if (!value.toString().contentEquals(currentVal)) {
+	                    Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
+	                }
+	
+	            } else {
+	                Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
+	
+	            }
+	            
+	            attrLDAPname = "d1ReplicationPolicySpaceAllocated";
+	            /* BigInteger */ value = node.getNodeReplicationPolicy().getSpaceAllocated();
+	            if (attributesMap.containsKey(attrLDAPname)) {
+	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
+	                if (!value.toString().contentEquals(currentVal)) {
+	                    Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
+	                }
+	
+	            } else {
+	                Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
+	
+	            }
+	            
+	            attrLDAPname = "d1ReplicationPolicyAllowedNode";
+	            
+	            List<NodeReference> existingNodeList = new ArrayList<NodeReference>();
+	            if (attributesMap.containsKey(attrLDAPname)) {
+	                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
+	                while (currentList.hasMore()) {
+	                    NodeReference nodeValue = new NodeReference();
+	                    nodeValue.setValue((String) currentList.next());
+	                    existingNodeList.add(nodeValue);
+	
+	                }
+	            }
+	            // Determine which attributes to add
+	            // added attributes should be the items in the new subject list
+	            // minus the same items in the existing list
+	            List<NodeReference> additionList = new ArrayList<NodeReference>();
+	            additionList.addAll(node.getNodeReplicationPolicy().getAllowedNodeList());
+	
+	            if (!(existingNodeList.isEmpty()) && !(additionList.isEmpty())) {
+	                additionList.removeAll(existingNodeList);
+	            }
+	
+	            if (!additionList.isEmpty()) {
+	                Attribute addNodes = new BasicAttribute(attrLDAPname);
+	
+	                for (NodeReference addition : additionList) {
+	                    addNodes.add(addition.getValue());
+	                }
+	                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, addNodes));
+	            }
+	
+	            // Determine which attributes to remove
+	            // removed attributes should be the items in the existing subject list
+	            // minus the same items in the new subject list
+	            List<NodeReference> removalList = new ArrayList<NodeReference>();
+	            removalList.addAll(existingNodeList);
+	            if (!(node.getNodeReplicationPolicy().getAllowedObjectFormatList().isEmpty()) && !(removalList.isEmpty())) {
+	                removalList.removeAll(node.getContactSubjectList());
+	            }
+	
+	            if (!removalList.isEmpty()) {
+	                Attribute removeNodes = new BasicAttribute(attrLDAPname);
+	
+	                for (NodeReference removal : removalList) {
+	                    removeNodes.add(removal.getValue());
+	                }
+	                modificationItemList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, removeNodes));
+	            }
+	            
+	            attrLDAPname = "d1ReplicationPolicyAllowedObjectFormat";
+	            
+	            List<ObjectFormatIdentifier> existingFormatList = new ArrayList<ObjectFormatIdentifier>();
+	            if (attributesMap.containsKey(attrLDAPname)) {
+	                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
+	                while (currentList.hasMore()) {
+	                	ObjectFormatIdentifier formatValue = new ObjectFormatIdentifier();
+	                    formatValue.setValue((String) currentList.next());
+	                    existingFormatList.add(formatValue);
+	
+	                }
+	            }
+	            // Determine which attributes to add
+	            // added attributes should be the items in the new subject list
+	            // minus the same items in the existing list
+	            List<ObjectFormatIdentifier> formatAdditionList = new ArrayList<ObjectFormatIdentifier>();
+	            formatAdditionList.addAll(node.getNodeReplicationPolicy().getAllowedObjectFormatList());
+	
+	            if (!(existingFormatList.isEmpty()) && !(formatAdditionList.isEmpty())) {
+	                formatAdditionList.removeAll(existingFormatList);
+	            }
+	
+	            if (!formatAdditionList.isEmpty()) {
+	                Attribute addFormats = new BasicAttribute(attrLDAPname);
+	
+	                for (ObjectFormatIdentifier addition : formatAdditionList) {
+	                    addFormats.add(addition.getValue());
+	                }
+	                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, addFormats));
+	            }
+	
+	            // Determine which attributes to remove
+	            // removed attributes should be the items in the existing subject list
+	            // minus the same items in the new subject list
+	            List<ObjectFormatIdentifier> formatRemovalList = new ArrayList<ObjectFormatIdentifier>();
+	            formatRemovalList.addAll(existingFormatList);
+	            if (!(node.getNodeReplicationPolicy().getAllowedObjectFormatList().isEmpty()) && !(formatRemovalList.isEmpty())) {
+	                formatRemovalList.removeAll(node.getContactSubjectList());
+	            }
+	
+	            if (!formatRemovalList.isEmpty()) {
+	                Attribute removeFormats = new BasicAttribute(attrLDAPname);
+	
+	                for (ObjectFormatIdentifier removal : formatRemovalList) {
+	                    removeFormats.add(removal.getValue());
+	                }
+	                modificationItemList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, removeFormats));
+	            }
             }
-            
-            attrLDAPname = "d1ReplicationPolicySpaceAllocated";
-            /* BigInteger */ value = node.getNodeReplicationPolicy().getSpaceAllocated();
-            if (attributesMap.containsKey(attrLDAPname)) {
-                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
-                if (!value.toString().contentEquals(currentVal)) {
-                    Attribute attr = new BasicAttribute(attrLDAPname, value);
-                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
-                }
-
-            } else {
-                Attribute attr = new BasicAttribute(attrLDAPname, value);
-                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
-
-            }
-            
-            attrLDAPname = "d1ReplicationPolicyAllowedNode";
-            
-            List<NodeReference> existingNodeList = new ArrayList<NodeReference>();
-            if (attributesMap.containsKey(attrLDAPname)) {
-                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
-                while (currentList.hasMore()) {
-                    NodeReference nodeValue = new NodeReference();
-                    nodeValue.setValue((String) currentList.next());
-                    existingNodeList.add(nodeValue);
-
-                }
-            }
-            // Determine which attributes to add
-            // added attributes should be the items in the new subject list
-            // minus the same items in the existing list
-            List<NodeReference> additionList = new ArrayList<NodeReference>();
-            additionList.addAll(node.getNodeReplicationPolicy().getAllowedNodeList());
-
-            if (!(existingNodeList.isEmpty()) && !(additionList.isEmpty())) {
-                additionList.removeAll(existingNodeList);
-            }
-
-            if (!additionList.isEmpty()) {
-                Attribute addNodes = new BasicAttribute(attrLDAPname);
-
-                for (NodeReference addition : additionList) {
-                    addNodes.add(addition.getValue());
-                }
-                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, addNodes));
-            }
-
-            // Determine which attributes to remove
-            // removed attributes should be the items in the existing subject list
-            // minus the same items in the new subject list
-            List<NodeReference> removalList = new ArrayList<NodeReference>();
-            removalList.addAll(existingNodeList);
-            if (!(node.getNodeReplicationPolicy().getAllowedObjectFormatList().isEmpty()) && !(removalList.isEmpty())) {
-                removalList.removeAll(node.getContactSubjectList());
-            }
-
-            if (!removalList.isEmpty()) {
-                Attribute removeNodes = new BasicAttribute(attrLDAPname);
-
-                for (NodeReference removal : removalList) {
-                    removeNodes.add(removal.getValue());
-                }
-                modificationItemList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, removeNodes));
-            }
-            
-            attrLDAPname = "d1ReplicationPolicyAllowedObjectFormat";
-            
-            List<ObjectFormatIdentifier> existingFormatList = new ArrayList<ObjectFormatIdentifier>();
-            if (attributesMap.containsKey(attrLDAPname)) {
-                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
-                while (currentList.hasMore()) {
-                	ObjectFormatIdentifier formatValue = new ObjectFormatIdentifier();
-                    formatValue.setValue((String) currentList.next());
-                    existingFormatList.add(formatValue);
-
-                }
-            }
-            // Determine which attributes to add
-            // added attributes should be the items in the new subject list
-            // minus the same items in the existing list
-            List<ObjectFormatIdentifier> formatAdditionList = new ArrayList<ObjectFormatIdentifier>();
-            formatAdditionList.addAll(node.getNodeReplicationPolicy().getAllowedObjectFormatList());
-
-            if (!(existingFormatList.isEmpty()) && !(formatAdditionList.isEmpty())) {
-                formatAdditionList.removeAll(existingFormatList);
-            }
-
-            if (!formatAdditionList.isEmpty()) {
-                Attribute addFormats = new BasicAttribute(attrLDAPname);
-
-                for (ObjectFormatIdentifier addition : formatAdditionList) {
-                    addFormats.add(addition.getValue());
-                }
-                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, addFormats));
-            }
-
-            // Determine which attributes to remove
-            // removed attributes should be the items in the existing subject list
-            // minus the same items in the new subject list
-            List<ObjectFormatIdentifier> formatRemovalList = new ArrayList<ObjectFormatIdentifier>();
-            formatRemovalList.addAll(existingFormatList);
-            if (!(node.getNodeReplicationPolicy().getAllowedObjectFormatList().isEmpty()) && !(formatRemovalList.isEmpty())) {
-                formatRemovalList.removeAll(node.getContactSubjectList());
-            }
-
-            if (!formatRemovalList.isEmpty()) {
-                Attribute removeFormats = new BasicAttribute(attrLDAPname);
-
-                for (ObjectFormatIdentifier removal : formatRemovalList) {
-                    removeFormats.add(removal.getValue());
-                }
-                modificationItemList.add(new ModificationItem(DirContext.REMOVE_ATTRIBUTE, removeFormats));
-            }  
         }
         
         return modificationItemList;
