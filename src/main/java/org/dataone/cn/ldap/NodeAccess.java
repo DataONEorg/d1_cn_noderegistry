@@ -1137,8 +1137,8 @@ public class NodeAccess extends LDAPService {
             
 	            String attrLDAPname = "d1ReplicationPolicyMaxObjectSize";
 	            BigInteger value = node.getNodeReplicationPolicy().getMaxObjectSize();
-	            if (attributesMap.containsKey(attrLDAPname)) {
-	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
+	            if (attributesMap.containsKey(attrLDAPname.toLowerCase())) {
+	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname.toLowerCase()));
 	                if (!value.toString().contentEquals(currentVal)) {
 	                    Attribute attr = new BasicAttribute(attrLDAPname, value.toString());
 	                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
@@ -1152,8 +1152,8 @@ public class NodeAccess extends LDAPService {
 	            
 	            attrLDAPname = "d1ReplicationPolicySpaceAllocated";
 	            /* BigInteger */ value = node.getNodeReplicationPolicy().getSpaceAllocated();
-	            if (attributesMap.containsKey(attrLDAPname)) {
-	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
+	            if (attributesMap.containsKey(attrLDAPname.toLowerCase())) {
+	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname.toLowerCase()));
 	                if (!value.toString().contentEquals(currentVal)) {
 	                    Attribute attr = new BasicAttribute(attrLDAPname, value.toString());
 	                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
@@ -1168,8 +1168,8 @@ public class NodeAccess extends LDAPService {
 	            attrLDAPname = "d1ReplicationPolicyAllowedNode";
 	            
 	            List<NodeReference> existingNodeList = new ArrayList<NodeReference>();
-	            if (attributesMap.containsKey(attrLDAPname)) {
-	                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
+	            if (attributesMap.containsKey(attrLDAPname.toLowerCase())) {
+	                NamingEnumeration currentList = attributesMap.get(attrLDAPname.toLowerCase());
 	                while (currentList.hasMore()) {
 	                    NodeReference nodeValue = new NodeReference();
 	                    nodeValue.setValue((String) currentList.next());
@@ -1217,8 +1217,8 @@ public class NodeAccess extends LDAPService {
 	            attrLDAPname = "d1ReplicationPolicyAllowedObjectFormat";
 	            
 	            List<ObjectFormatIdentifier> existingFormatList = new ArrayList<ObjectFormatIdentifier>();
-	            if (attributesMap.containsKey(attrLDAPname)) {
-	                NamingEnumeration currentList = attributesMap.get(attrLDAPname);
+	            if (attributesMap.containsKey(attrLDAPname.toLowerCase())) {
+	                NamingEnumeration currentList = attributesMap.get(attrLDAPname.toLowerCase());
 	                while (currentList.hasMore()) {
 	                	ObjectFormatIdentifier formatValue = new ObjectFormatIdentifier();
 	                    formatValue.setValue((String) currentList.next());
