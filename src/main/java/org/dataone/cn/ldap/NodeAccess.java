@@ -28,7 +28,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
@@ -43,6 +42,7 @@ import javax.naming.directory.ModificationItem;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.security.auth.x500.X500Principal;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.configuration.Settings;
@@ -50,7 +50,6 @@ import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
-import org.dataone.service.types.v2.Node;
 import org.dataone.service.types.v1.NodeReference;
 import org.dataone.service.types.v1.NodeReplicationPolicy;
 import org.dataone.service.types.v1.NodeState;
@@ -62,6 +61,7 @@ import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.Synchronization;
+import org.dataone.service.types.v2.Node;
 import org.dataone.service.util.DateTimeMarshaller;
 
 /**
@@ -820,23 +820,23 @@ public class NodeAccess extends LDAPService {
                 nodeAttributes.put(new BasicAttribute("d1NodeLastCompleteHarvest", "1900-01-01T00:00:00Z"));
             }
         }
-        
+       
         /* Node Replication Policy items */
         NodeReplicationPolicy nrp = node.getNodeReplicationPolicy();
         if (nrp != null)  {
-        	nodeAttributes.put(new BasicAttribute("d1ReplicationPolicyMaxObjectSize", nrp.getMaxObjectSize()));
-        	nodeAttributes.put(new BasicAttribute("d1ReplicationPolicySpaceAllocated", nrp.getSpaceAllocated()));
+        	nodeAttributes.put(new BasicAttribute("d1ReplicationPolicyMaxObjectSize", nrp.getMaxObjectSize().toString()));
+        	nodeAttributes.put(new BasicAttribute("d1ReplicationPolicySpaceAllocated", nrp.getSpaceAllocated().toString()));
         	if (nrp.getAllowedNodeList() != null && !nrp.getAllowedNodeList().isEmpty()) {
         		Attribute allowedNodes = new BasicAttribute("d1ReplicationPolicyAllowedNode");
         		for (NodeReference nr : nrp.getAllowedNodeList()) {
-        			allowedNodes.add(nr);
+        			allowedNodes.add(nr.getValue());
         		}
         		nodeAttributes.put(allowedNodes);
         	}
         	if (nrp.getAllowedObjectFormatList() != null && !nrp.getAllowedObjectFormatList().isEmpty()) {
         		Attribute allowedFormats = new BasicAttribute("d1ReplicationPolicyAllowedObjectFormat");
-        		for (ObjectFormatIdentifier nr : nrp.getAllowedObjectFormatList()) {
-        			allowedFormats.add(nr);
+        		for (ObjectFormatIdentifier formatid : nrp.getAllowedObjectFormatList()) {
+        			allowedFormats.add(formatid.getValue());
         		}
         		nodeAttributes.put(allowedFormats);
         	}
@@ -1140,12 +1140,12 @@ public class NodeAccess extends LDAPService {
 	            if (attributesMap.containsKey(attrLDAPname)) {
 	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
 	                if (!value.toString().contentEquals(currentVal)) {
-	                    Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                    Attribute attr = new BasicAttribute(attrLDAPname, value.toString());
 	                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
 	                }
 	
 	            } else {
-	                Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                Attribute attr = new BasicAttribute(attrLDAPname, value.toString());
 	                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
 	
 	            }
@@ -1155,12 +1155,12 @@ public class NodeAccess extends LDAPService {
 	            if (attributesMap.containsKey(attrLDAPname)) {
 	                String currentVal = getEnumerationValueString(attributesMap.get(attrLDAPname));
 	                if (!value.toString().contentEquals(currentVal)) {
-	                    Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                    Attribute attr = new BasicAttribute(attrLDAPname, value.toString());
 	                    modificationItemList.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, attr));
 	                }
 	
 	            } else {
-	                Attribute attr = new BasicAttribute(attrLDAPname, value);
+	                Attribute attr = new BasicAttribute(attrLDAPname, value.toString());
 	                modificationItemList.add(new ModificationItem(DirContext.ADD_ATTRIBUTE, attr));
 	
 	            }
