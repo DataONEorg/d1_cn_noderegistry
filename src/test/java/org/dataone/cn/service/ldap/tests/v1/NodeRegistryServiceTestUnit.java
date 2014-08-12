@@ -32,6 +32,7 @@ import java.util.Date;
 import java.util.List;
 
 import javax.naming.NamingException;
+import javax.naming.ldap.LdapContext;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,9 +45,11 @@ import org.apache.directory.server.core.annotations.CreatePartition;
 import org.apache.directory.server.core.authn.SimpleAuthenticator;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
 import org.apache.directory.server.core.integ.FrameworkRunner;
+import org.apache.directory.server.integ.ServerIntegrationUtils;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
+
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -61,18 +64,17 @@ import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
 import org.dataone.service.types.v1.Synchronization;
 import org.dataone.service.util.TypeMarshaller;
+import org.dataone.test.apache.directory.server.integ.ApacheDSSuiteRunner;
 import org.jibx.runtime.JiBXException;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(FrameworkRunner.class)
-@CreateDS(allowAnonAccess = false, enableAccessControl=true,  authenticators ={@CreateAuthenticator(type = SimpleAuthenticator.class)} ,name = "org", partitions = { @CreatePartition(name = "org", suffix = "dc=org") })
-@ApplyLdifFiles({"org/dataone/test/apache/directory/server/dataone-schema.ldif", "org/dataone/test/apache/directory/server/dataone-base-data.ldif"})
-@CreateLdapServer(transports = { @CreateTransport(protocol = "LDAP", port=11389) })
-public class NodeRegistryServiceTest extends AbstractLdapTestUnit {
+
+public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     
-    public static Log log = LogFactory.getLog(NodeRegistryServiceTest.class);
+    public static Log log = LogFactory.getLog(NodeRegistryServiceTestUnit.class);
     NodeRegistryService nodeRegistryService = new NodeRegistryService();
     NodeAccess nodeAccess = new NodeAccess();
     NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
@@ -82,7 +84,25 @@ public class NodeRegistryServiceTest extends AbstractLdapTestUnit {
     Node testMNNode;
     Node testCNNode;
     Node testMNNoSynchNode;
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+            int ldapTimeoutCount = 0;
 
+        if (ApacheDSSuiteRunner.getLdapServer() == null) {
+            throw new Exception("ApacheDSSuiteRunner was not automatically configured. FATAL ERROR!");
+        }
+        while (!ApacheDSSuiteRunner.getLdapServer().isStarted() && ldapTimeoutCount < 10) {
+            Thread.sleep(500L);
+            log.info("LdapServer is not yet started");
+            ldapTimeoutCount++;
+        }
+        if (!ApacheDSSuiteRunner.getLdapServer().isStarted()) {
+                throw new IllegalStateException("Service is not running");
+        }
+        final LdapContext ctx = ServerIntegrationUtils.getWiredContext(
+				ApacheDSSuiteRunner.getLdapServer(), null);
+        ctx.lookup("dc=dataone,dc=org");
+    }
     @Before
     public void removeAnyTestNodes() throws IOException, InstantiationException, IllegalAccessException, JiBXException, NamingException {
         testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNode.xml");

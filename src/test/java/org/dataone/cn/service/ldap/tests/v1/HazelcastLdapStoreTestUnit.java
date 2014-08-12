@@ -67,17 +67,17 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 
+import org.dataone.test.apache.directory.server.integ.ApacheDSSuiteRunner;
+import org.junit.BeforeClass;
+
 /**
  *
  * @author waltz
  */
-@RunWith(FrameworkRunner.class)
-@CreateDS(allowAnonAccess = false, enableAccessControl=true,  authenticators ={@CreateAuthenticator(type = SimpleAuthenticator.class)} ,name = "org", partitions = { @CreatePartition(name = "org", suffix = "dc=org") })
-@ApplyLdifFiles({"org/dataone/test/apache/directory/server/dataone-schema.ldif", "org/dataone/test/apache/directory/server/dataone-base-data.ldif"})
-@CreateLdapServer(transports = { @CreateTransport(protocol = "LDAP", port=11389) })
-public class HazelcastLdapStoreTest extends AbstractLdapTestUnit {
 
-    static Logger logger = Logger.getLogger(HazelcastLdapStoreTest.class);
+public class HazelcastLdapStoreTestUnit extends AbstractLdapTestUnit {
+
+    static Logger logger = Logger.getLogger(HazelcastLdapStoreTestUnit.class);
     private HazelcastInstance hazelcastInstance;
     final static int SIZE = 16384;
     NodeRegistryService nodeRegistryService = new NodeRegistryService();
@@ -85,28 +85,27 @@ public class HazelcastLdapStoreTest extends AbstractLdapTestUnit {
     NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
     ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
 
-    /**
-     * pull in the CnCore implementation to test against
-     * @author rwaltz
-     */
-    /**
-     * pull in the CnCore implementation to test against
-     * @author rwaltz
-     */
-    @Before
-    public void before() throws Exception {
-        int ldapTimeoutCount = 0;
-        while (!ldapServer.isStarted() && ldapTimeoutCount < 10) {
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+            int ldapTimeoutCount = 0;
+
+        if (ApacheDSSuiteRunner.getLdapServer() == null) {
+            throw new Exception("ApacheDSSuiteRunner was not automatically configured. FATAL ERROR!");
+        }
+        while (!ApacheDSSuiteRunner.getLdapServer().isStarted() && ldapTimeoutCount < 10) {
             Thread.sleep(500L);
             logger.info("LdapServer is not yet started");
             ldapTimeoutCount++;
         }
-        if (!ldapServer.isStarted()) {
+        if (!ApacheDSSuiteRunner.getLdapServer().isStarted()) {
                 throw new IllegalStateException("Service is not running");
         }
         final LdapContext ctx = ServerIntegrationUtils.getWiredContext(
-				ldapServer, null);
+				ApacheDSSuiteRunner.getLdapServer(), null);
         ctx.lookup("dc=dataone,dc=org");
+    }
+    @Before
+    public void before() throws Exception {
 
         if (hazelcastInstance == null) {
             InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/service/ldap/tests/config/hazelcast.xml");
