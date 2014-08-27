@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -36,20 +37,11 @@ import javax.naming.ldap.LdapContext;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.directory.server.annotations.CreateLdapServer;
-import org.apache.directory.server.annotations.CreateTransport;
-import org.apache.directory.server.core.annotations.ApplyLdifFiles;
-import org.apache.directory.server.core.annotations.CreateAuthenticator;
-import org.apache.directory.server.core.annotations.CreateDS;
-import org.apache.directory.server.core.annotations.CreatePartition;
-import org.apache.directory.server.core.authn.SimpleAuthenticator;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
-import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.apache.directory.server.integ.ServerIntegrationUtils;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
-
 import org.dataone.service.cn.impl.v1.NodeRegistryService;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -58,6 +50,8 @@ import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeList;
 import org.dataone.service.types.v1.NodeReference;
+import org.dataone.service.types.v1.NodeReplicationPolicy;
+import org.dataone.service.types.v1.ObjectFormatIdentifier;
 import org.dataone.service.types.v1.Schedule;
 import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
@@ -69,7 +63,6 @@ import org.jibx.runtime.JiBXException;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 
 public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
@@ -84,6 +77,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     Node testMNNode;
     Node testCNNode;
     Node testMNNoSynchNode;
+    Node testMNNoRepPolicy;
     @BeforeClass
     public static void beforeClass() throws Exception {
             int ldapTimeoutCount = 0;
@@ -103,16 +97,24 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
 				ApacheDSSuiteRunner.getLdapServer(), null);
         ctx.lookup("dc=dataone,dc=org");
     }
+    
+    
     @Before
     public void removeAnyTestNodes() throws IOException, InstantiationException, IllegalAccessException, JiBXException, NamingException {
         testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNode.xml");
         testCNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/cnNode.xml");
         testMNNoSynchNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeValidNoSynch.xml");
+        testMNNoRepPolicy = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeNoRepPolicy.xml");
         
         ldapPopulationService.deleteTestNodesByName(testMNNode.getIdentifier().getValue());
         ldapPopulationService.deleteTestNodesByName(testCNNode.getIdentifier().getValue());
         ldapPopulationService.deleteTestNodesByName(testMNNoSynchNode.getIdentifier().getValue());
+        ldapPopulationService.deleteTestNodesByName(testMNNoRepPolicy.getIdentifier().getValue());
     }
+    
+
+
+    
 
     @Test
     public void testRegisterListAndDeleteNode() throws Exception {
@@ -219,7 +221,15 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNoSynchNode);
         ldapPopulationService.deleteTestNodesByName(testMNNoSynchNode.getIdentifier().getValue());
     }
-
+    
+    @Test
+    public void testRegisterNoRepPolicyMNNode() throws Exception {
+        // This should be able to register without error, that is all
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNoRepPolicy);
+        ldapPopulationService.deleteTestNodesByName(testMNNoSynchNode.getIdentifier().getValue());
+    }
+    
+    
     @Test
     public void testUpdateNoSyncNodeWithSyncMNNode() throws Exception {
         // This should be able to register without error, that is all
@@ -248,6 +258,89 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
             fail("Test misconfiguration " + ex);
         }
         ldapPopulationService.deleteTestNodesByName(testMNNoSynchNode.getIdentifier().getValue());
+    }
+    
+    
+    @Test
+    public void testUpdateNoRepPolicyWithRepPolicyMNnode() throws Exception {
+        // This should be able to register without error, that is all
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNoRepPolicy);
+        Node mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        NodeReplicationPolicy nrp = new NodeReplicationPolicy();
+        nrp.setSpaceAllocated(BigInteger.TEN);
+        nrp.setMaxObjectSize(BigInteger.ONE);
+
+        NodeReference nr1 = new NodeReference(); 
+        nr1.setValue("foo");
+        nrp.addAllowedNode(nr1);
+        NodeReference nr2 = new NodeReference(); 
+        nr2.setValue("bar");
+        nrp.addAllowedNode(nr2);
+
+        ObjectFormatIdentifier fmtid1 = new ObjectFormatIdentifier();
+        fmtid1.setValue("text/xml");
+        nrp.addAllowedObjectFormat(fmtid1);
+        ObjectFormatIdentifier fmtid2 = new ObjectFormatIdentifier();
+        fmtid2.setValue("text/csv");
+        nrp.addAllowedObjectFormat(fmtid2);
+        ObjectFormatIdentifier fmtid3 = new ObjectFormatIdentifier();
+        fmtid3.setValue("application/octet-stream");
+        nrp.addAllowedObjectFormat(fmtid3);
+        
+        mnRegisteredNode.setNodeReplicationPolicy(nrp);
+        nodeRegistryService.updateNodeCapabilities(mnNodeReference, mnRegisteredNode);
+        mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        try {
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy() != null);
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getMaxObjectSize().toString().equals("1"));
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getSpaceAllocated().toString().equals("10"));
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getAllowedNodeList().size() == 2);
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getAllowedObjectFormatList().size() == 3);
+        } catch (NullPointerException ex) {
+            fail("Test misconfiguration " + ex);
+        }
+        ldapPopulationService.deleteTestNodesByName(testMNNoRepPolicy.getIdentifier().getValue());
+    }
+    
+    @Test
+    public void testUpdateRepPolicyWithNewRepPolicy() throws Exception {
+        // This should be able to register without error, that is all
+        NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
+        Node mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        NodeReplicationPolicy nrp = new NodeReplicationPolicy();
+        nrp.setSpaceAllocated(BigInteger.TEN);
+        nrp.setMaxObjectSize(BigInteger.ONE);
+
+        NodeReference nr1 = new NodeReference(); 
+        nr1.setValue("flip");
+        nrp.addAllowedNode(nr1);
+        NodeReference nr2 = new NodeReference(); 
+        nr2.setValue("flop");
+        nrp.addAllowedNode(nr2);
+
+        ObjectFormatIdentifier fmtid1 = new ObjectFormatIdentifier();
+        fmtid1.setValue("text/xml");
+        nrp.addAllowedObjectFormat(fmtid1);
+        ObjectFormatIdentifier fmtid2 = new ObjectFormatIdentifier();
+        fmtid2.setValue("text/csv");
+        nrp.addAllowedObjectFormat(fmtid2);
+        ObjectFormatIdentifier fmtid3 = new ObjectFormatIdentifier();
+        fmtid3.setValue("application/octet-stream");
+        nrp.addAllowedObjectFormat(fmtid3);
+        
+        mnRegisteredNode.setNodeReplicationPolicy(nrp);
+        nodeRegistryService.updateNodeCapabilities(mnNodeReference, mnRegisteredNode);
+        mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        try {
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy() != null);
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getMaxObjectSize().toString().equals("1"));
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getSpaceAllocated().toString().equals("10"));
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getAllowedNodeList().size() == 2);
+            assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getAllowedObjectFormatList().size() == 3);
+        } catch (NullPointerException ex) {
+            fail("Test misconfiguration " + ex);
+        }
+        ldapPopulationService.deleteTestNodesByName(testMNNoRepPolicy.getIdentifier().getValue());
     }
 
     @Test(expected = InvalidRequest.class)
@@ -285,7 +378,9 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         
     }
     
-    private Node buildTestNode(String resourcePath) throws IOException, InstantiationException, IllegalAccessException, JiBXException {
+    private Node buildTestNode(String resourcePath) 
+    throws IOException, InstantiationException, IllegalAccessException, JiBXException 
+    {
         ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
         InputStream is = this.getClass().getResourceAsStream(resourcePath);
         

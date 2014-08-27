@@ -26,24 +26,13 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Set;
 
 import javax.naming.ldap.LdapContext;
 
-import org.apache.directory.server.annotations.CreateLdapServer;
-import org.apache.directory.server.annotations.CreateTransport;
-import org.apache.directory.server.core.annotations.ApplyLdifFiles;
-import org.apache.directory.server.core.annotations.CreateAuthenticator;
-import org.apache.directory.server.core.annotations.CreateDS;
-import org.apache.directory.server.core.annotations.CreatePartition;
-import org.apache.directory.server.core.authn.SimpleAuthenticator;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
-import org.apache.directory.server.core.integ.FrameworkRunner;
 import org.apache.directory.server.integ.ServerIntegrationUtils;
 import org.apache.log4j.Logger;
 import org.dataone.cn.ldap.NodeAccess;
@@ -58,17 +47,15 @@ import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.util.TypeMarshaller;
+import org.dataone.test.apache.directory.server.integ.ApacheDSSuiteRunner;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-
-import org.dataone.test.apache.directory.server.integ.ApacheDSSuiteRunner;
-import org.junit.BeforeClass;
 
 /**
  *
@@ -122,24 +109,35 @@ public class HazelcastLdapStoreTestUnit extends AbstractLdapTestUnit {
         NodeReference nodeReference = new NodeReference();
         nodeReference.setValue("test");
         try {
-            ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
+        	
+        	// TODO:  why do we convert inputstream to outputstream then back again?
+//            ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
+//            InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/mnNode.xml");
+//
+//            BufferedInputStream bInputStream = new BufferedInputStream(is);
+//            byte[] barray = new byte[SIZE];
+//            int nRead = 0;
+//            while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
+//                mnNodeOutput.write(barray, 0, nRead);
+//            }
+//            bInputStream.close();
+//            
+//            ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
+//           Node testNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+            
             InputStream is = this.getClass().getResourceAsStream("/org/dataone/cn/resources/samples/v1/mnNode.xml");
-
-            BufferedInputStream bInputStream = new BufferedInputStream(is);
-            byte[] barray = new byte[SIZE];
-            int nRead = 0;
-            while ((nRead = bInputStream.read(barray, 0, SIZE)) != -1) {
-                mnNodeOutput.write(barray, 0, nRead);
-            }
-            bInputStream.close();
-            ByteArrayInputStream bArrayInputStream = new ByteArrayInputStream(mnNodeOutput.toByteArray());
-            Node testNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
+            Node testNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, is);
 
             IMap<NodeReference, org.dataone.service.types.v2.Node> d1NodesMap = hazelcastInstance.getMap("hzNodes");
 
+            /* make sure that the node we plan to register is not already in the map */
             Node nullnode = d1NodesMap.get(nodeReference);
             assertNull(nullnode);
+            
+            // register node under original nodeID
             nodeReference = nodeRegistryService.register(testNode);
+            
+            // make sure that the identifier
             testNode.setIdentifier(nodeReference);
             nodeAccess.setNodeApproved(nodeReference, Boolean.TRUE);
             testNode.setReplicate(false);
@@ -151,7 +149,9 @@ public class HazelcastLdapStoreTestUnit extends AbstractLdapTestUnit {
             contactSubject3.setValue("cn=test3,dc=dataone,dc=org");
             testNode.addContactSubject(contactSubject3);
             testNode.addSubject(contactSubject3);
+            
             d1NodesMap.get(nodeReference);
+            
             d1NodesMap.put(nodeReference, TypeMarshaller.convertTypeFromType(testNode, org.dataone.service.types.v2.Node.class));
 
             Node node = d1NodesMap.get(nodeReference);
