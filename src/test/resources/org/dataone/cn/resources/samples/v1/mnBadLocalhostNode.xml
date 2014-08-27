@@ -26,6 +26,14 @@
         <lastHarvested>1900-01-01T00:00:00.000+00:00</lastHarvested>
         <lastCompleteHarvest>1900-01-01T00:00:00.000+00:00</lastCompleteHarvest>
     </synchronization>
+    <nodeReplicationPolicy>
+    	<maxObjectSize>12345</maxObjectSize>
+    	<spaceAllocated>123456789</spaceAllocated>
+    	<allowedNode>urn:node:testNode1</allowedNode>
+    	<allowedNode>urn:node:testNode2</allowedNode>
+    	<allowedObjectFormat>text/plain</allowedObjectFormat>
+    	<allowedObjectFormat>text/xml</allowedObjectFormat>
+    </nodeReplicationPolicy>
     <subject>cn=test,dc=dataone,dc=org</subject>
     <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>
 </d1:node>

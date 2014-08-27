@@ -119,7 +119,8 @@ public class NodeRegistryService {
     	try {
         	node = TypeMarshaller.convertTypeFromType(impl.getNode(nodeIdentifier), Node.class);
         } catch (Exception e) {
-			throw new ServiceFailure("0000", e.getMessage());        	
+        	e.printStackTrace();
+			throw new ServiceFailure("0000", e.getClass().getSimpleName() + ":" + e.getMessage());        	
         }
 
         return node;
@@ -195,7 +196,8 @@ public class NodeRegistryService {
     	try {
     		currentNode = TypeMarshaller.convertTypeFromType(node, org.dataone.service.types.v2.Node.class);
         } catch (Exception e) {
-			throw new ServiceFailure("0000", e.getMessage());        	
+        	e.printStackTrace();
+			throw new ServiceFailure("0000", e.getClass().getSimpleName() + ":" + e.getMessage());        	
         }
 		return impl.updateNodeCapabilities(nodeid, currentNode);
     }
