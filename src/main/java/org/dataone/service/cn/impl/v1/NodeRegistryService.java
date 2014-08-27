@@ -99,7 +99,7 @@ public class NodeRegistryService {
         for (Node node : allNodes) {
 
             String nodeIdentifier = node.getIdentifier().getValue();
-            log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
+            log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() );
             List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier);
             if (!serviceList.isEmpty()) {
                 for (Service service : serviceList) {

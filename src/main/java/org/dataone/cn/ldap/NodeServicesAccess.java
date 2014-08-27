@@ -23,6 +23,7 @@
 package org.dataone.cn.ldap;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import javax.naming.CommunicationException;
@@ -41,6 +42,7 @@ import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeReference;
 import org.dataone.service.types.v1.Service;
+import org.dataone.service.util.DateTimeMarshaller;
 
 /**
  *
@@ -122,9 +124,9 @@ public class NodeServicesAccess extends LDAPService {
             DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-
+            
             NamingEnumeration<SearchResult> results =
-                    ctx.search(base, "(&(objectClass=d1NodeService)(d1NodeId=" + nodeIdentifier + "))", ctls);
+                    ctx.search(this.base, "(&(objectClass=d1NodeService)(d1NodeId=" + nodeIdentifier + "))", ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -148,6 +150,8 @@ public class NodeServicesAccess extends LDAPService {
             log.error("LDAP Service is unreponsive " + nodeIdentifier, ex);
             throw new ServiceFailure("-1", "LDAP Service is unreponsive");
         } catch (Exception e) {
+            System.err.print("[" + DateTimeMarshaller.serializeDateToUTC(new Date()) + "]  NodeId: " + nodeIdentifier + " ");
+            e.printStackTrace();
             log.error("Problem search NodesServices for Nodelist", e);
             throw new ServiceFailure("-1", e.getMessage());
         }
