@@ -53,6 +53,12 @@ import org.dataone.service.util.DateTimeMarshaller;
 public class NodeServicesAccess extends LDAPService {
 
     public static Log log = LogFactory.getLog(NodeServicesAccess.class);
+    
+    public static final String OBJECT_CLASS_ID = "d1NodeService";
+    public static final String NODE_SERVICE_ID = "d1NodeServiceId";
+    public static final String NODE_SERVICE_NAME = "d1NodeServiceName";
+    public static final String NODE_SERVICE_VERSION = "d1NodeServiceVersion";
+    public static final String NODE_SERVICE_AVAILABLE = "d1NodeServiceAvailable";
 
     public NodeServicesAccess() {
         // we need to use a different base for the ids
@@ -78,7 +84,7 @@ public class NodeServicesAccess extends LDAPService {
      */
     public String buildNodeServiceDN(NodeReference nodeReference, Service service) {
         String d1NodeServiceId = buildNodeServiceId(service);
-        String serviceDN = "d1NodeServiceId=" + d1NodeServiceId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
+        String serviceDN =  NODE_SERVICE_ID + "=" + d1NodeServiceId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
         return serviceDN;
     }
 
@@ -126,8 +132,9 @@ public class NodeServicesAccess extends LDAPService {
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             
             NamingEnumeration<SearchResult> results =
-                    ctx.search(this.base, "(&(objectClass=d1NodeService)(d1NodeId=" + nodeIdentifier + "))", ctls);
-
+                    ctx.search(this.base, String.format("(&(objectClass=%s)(%s=%s))",
+                    OBJECT_CLASS_ID, NodeAccess.NODE_ID, nodeIdentifier), ctls);
+                    
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
                 String nodeDn = si.getNameInNamespace();
@@ -147,8 +154,8 @@ public class NodeServicesAccess extends LDAPService {
                 allServices.add(this.mapService(attributesMap));
             }
         } catch (CommunicationException ex) {
-            log.error("LDAP Service is unreponsive " + nodeIdentifier, ex);
-            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
+            log.error("LDAP Service is unresponsive " + nodeIdentifier, ex);
+            throw new ServiceFailure("-1", "LDAP Service is unresponsive");
         } catch (Exception e) {
             System.err.print("[" + DateTimeMarshaller.serializeDateToUTC(new Date()) + "]  NodeId: " + nodeIdentifier + " ");
             e.printStackTrace();
@@ -169,15 +176,15 @@ public class NodeServicesAccess extends LDAPService {
      * 
      */
     public Attributes mapNodeServiceAttributes(Node node, Service service) {
-        Attributes serviceAttributes = new BasicAttributes();
+        Attributes serviceAttributes = new BasicAttributes(true /* ignore attributeID case */);
         String nodeServiceId = buildNodeServiceId(service);
-        serviceAttributes.put(new BasicAttribute("objectclass", "d1NodeService"));
-        serviceAttributes.put(new BasicAttribute("d1NodeServiceId", nodeServiceId));
-        serviceAttributes.put(new BasicAttribute("d1NodeId", node.getIdentifier().getValue()));
+        serviceAttributes.put(new BasicAttribute("objectclass", OBJECT_CLASS_ID));
+        serviceAttributes.put(new BasicAttribute(NODE_SERVICE_ID, nodeServiceId));
+        serviceAttributes.put(new BasicAttribute(NodeAccess.NODE_ID, node.getIdentifier().getValue()));
 
-        serviceAttributes.put(new BasicAttribute("d1NodeServiceName", service.getName()));
-        serviceAttributes.put(new BasicAttribute("d1NodeServiceVersion", service.getVersion()));
-        serviceAttributes.put(new BasicAttribute("d1NodeServiceAvailable", Boolean.toString(service.getAvailable()).toUpperCase()));
+        serviceAttributes.put(new BasicAttribute(NODE_SERVICE_NAME, service.getName()));
+        serviceAttributes.put(new BasicAttribute(NODE_SERVICE_VERSION, service.getVersion()));
+        serviceAttributes.put(new BasicAttribute(NODE_SERVICE_AVAILABLE, Boolean.toString(service.getAvailable()).toUpperCase()));
         return serviceAttributes;
     }
 
@@ -192,9 +199,9 @@ public class NodeServicesAccess extends LDAPService {
      */
     public Service mapService(HashMap<String, String> attributesMap) {
         Service service = new Service();
-        service.setName(attributesMap.get("d1nodeservicename"));
-        service.setVersion(attributesMap.get("d1nodeserviceversion"));
-        service.setAvailable(Boolean.valueOf(attributesMap.get("d1nodeserviceavailable")));
+        service.setName(attributesMap.get(NODE_SERVICE_NAME.toLowerCase()));
+        service.setVersion(attributesMap.get(NODE_SERVICE_VERSION.toLowerCase()));
+        service.setAvailable(Boolean.valueOf(attributesMap.get(NODE_SERVICE_AVAILABLE.toLowerCase())));
         return service;
     }
 }

@@ -36,7 +36,7 @@
     	<allowedNode>urn:node:testNode1</allowedNode>
     	<allowedNode>urn:node:testNode2</allowedNode>
     	<allowedObjectFormat>text/plain</allowedObjectFormat>
-    	<allowedObjectFormat>tex/xml</allowedObjectFormat>
+    	<allowedObjectFormat>text/xml</allowedObjectFormat>
     </nodeReplicationPolicy>
     <subject>cn=test,dc=dataone,dc=org</subject>
     <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>

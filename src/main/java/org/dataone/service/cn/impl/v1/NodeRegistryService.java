@@ -282,6 +282,7 @@ public class NodeRegistryService {
      */
 
     public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
+
         try {
         if (node.isSynchronize()) {
             validateSynchronizationSchedule(node);

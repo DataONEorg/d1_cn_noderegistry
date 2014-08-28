@@ -56,6 +56,10 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
 
     public static Log log = LogFactory.getLog(ServiceMethodRestrictionsAccess.class);
     private static NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
+    
+    public static final String OBJECT_CLASS_ID = "d1ServiceMethodRestriction";
+    public static final String SERVICE_METHOD_NAME = "d1ServiceMethodName";
+    public static final String SERVICE_ALLOWED_SUBJECT = "d1AllowedSubject";
 
     public ServiceMethodRestrictionsAccess() {
         // we need to use a different base for the ids
@@ -82,8 +86,11 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      */
     public String buildServiceMethodRestrictionDN(NodeReference nodeReference, Service service, ServiceMethodRestriction restrict) {
         String d1NodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
-        String serviceMethodRestrictionDN = "d1ServiceMethodName=" + restrict.getMethodName() + ",d1NodeServiceId=" + d1NodeServiceId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
-        return serviceMethodRestrictionDN;
+//        String serviceMethodRestrictionDN = "d1ServiceMethodName=" + restrict.getMethodName() + ",d1NodeServiceId=" + d1NodeServiceId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
+        return String.format("%s=%s,%s=%s,cn=%s,dc=dataone,dc=org",
+        		SERVICE_METHOD_NAME, restrict.getMethodName(),
+        		NodeServicesAccess.NODE_SERVICE_ID, d1NodeServiceId,
+        		nodeReference.getValue());
     }
 
     /**
@@ -116,8 +123,13 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-            NamingEnumeration<SearchResult> results =
-                    ctx.search(this.base, "(&(&(objectClass=d1ServiceMethodRestriction)(d1NodeServiceId=" + serviceIdentifier + "))(d1NodeId=" + nodeIdentifier + "))", ctls);
+            NamingEnumeration<SearchResult> results = ctx.search(
+            		this.base, 
+            		String.format("(&(&(objectClass=%s)(%s=%s))(%s=%s))",
+                    		          OBJECT_CLASS_ID, 
+                    		          NodeServicesAccess.NODE_SERVICE_ID, serviceIdentifier,
+                    		          NodeAccess.NODE_ID, nodeIdentifier), 
+                    ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -139,8 +151,8 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
                 serviceMethodRestrictionList.add(this.mapServiceMethodRestriction(attributesMap));
             }
         } catch (CommunicationException ex) {
-            log.error("LDAP Service is unreponsive " + nodeIdentifier, ex);
-            throw new ServiceFailure("-1", "LDAP Service is unreponsive");
+            log.error("LDAP Service is unresponsive " + nodeIdentifier, ex);
+            throw new ServiceFailure("-1", "LDAP Service is unresponsive");
         } catch (Exception e) {
             log.error("Problem search Nodes for Nodelist", e);
             throw new ServiceFailure("-1", e.getMessage());
@@ -160,12 +172,12 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
     public ServiceMethodRestriction mapServiceMethodRestriction(HashMap<String, NamingEnumeration> attributesMap) throws NamingException {
         ServiceMethodRestriction serviceMethodRestriction = new ServiceMethodRestriction();
 
-        serviceMethodRestriction.setMethodName(getEnumerationValueString(attributesMap.get("d1servicemethodname")));
+        serviceMethodRestriction.setMethodName(getEnumerationValueString(attributesMap.get(SERVICE_METHOD_NAME.toLowerCase())));
 
-        if (attributesMap.containsKey("d1allowedsubject")) {
+        if (attributesMap.containsKey(SERVICE_ALLOWED_SUBJECT.toLowerCase())) {
             List<Subject> subjectList = serviceMethodRestriction.getSubjectList();
 
-            NamingEnumeration allowSubjects = attributesMap.get("d1allowedsubject");
+            NamingEnumeration allowSubjects = attributesMap.get(SERVICE_ALLOWED_SUBJECT.toLowerCase());
             while (allowSubjects.hasMore()) {
                 Subject allowSubject = new Subject();
                 X500Principal principal = new X500Principal((String) allowSubjects.next());
@@ -192,14 +204,14 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
     public Attributes mapServiceMethodRestrictionAttributes(Node node, Service service, ServiceMethodRestriction restrict) {
         Attributes serviceAttributes = new BasicAttributes();
         String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
-        serviceAttributes.put(new BasicAttribute("objectclass", "d1ServiceMethodRestriction"));
-        serviceAttributes.put(new BasicAttribute("d1NodeServiceId", nodeServiceId));
-        serviceAttributes.put(new BasicAttribute("d1NodeId", node.getIdentifier().getValue()));
+        serviceAttributes.put(new BasicAttribute("objectclass", OBJECT_CLASS_ID));
+        serviceAttributes.put(new BasicAttribute(NodeServicesAccess.NODE_SERVICE_ID, nodeServiceId));
+        serviceAttributes.put(new BasicAttribute(NodeAccess.NODE_ID, node.getIdentifier().getValue()));
 
-        serviceAttributes.put(new BasicAttribute("d1ServiceMethodName", restrict.getMethodName()));
+        serviceAttributes.put(new BasicAttribute(SERVICE_METHOD_NAME, restrict.getMethodName()));
         if (restrict.getSubjectList() != null && !(restrict.getSubjectList().isEmpty())) {
             for (Subject subject : restrict.getSubjectList()) {
-                serviceAttributes.put(new BasicAttribute("d1AllowedSubject", subject.getValue()));
+                serviceAttributes.put(new BasicAttribute(SERVICE_ALLOWED_SUBJECT, subject.getValue()));
             }
         }
         return serviceAttributes;
