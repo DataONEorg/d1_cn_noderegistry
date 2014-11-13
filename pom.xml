@@ -4,14 +4,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.dataone</groupId>
     <artifactId>d1_cn_noderegistry</artifactId>
-    <version>1.2.1</version>
+    <version>1.2.2</version>
     <name>DataONE_Cn_Node_Registry</name>
     <url>http://dataone.org</url>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <hazelcast.version>2.4.1</hazelcast.version>
-        <d1_cn_common_version>1.2.0</d1_cn_common_version>
-        <d1_test_resources_version>1.2.0</d1_test_resources_version>
+        <d1_cn_common_version>1.2.1</d1_cn_common_version>
+        <d1_test_resources_version>1.3.0</d1_test_resources_version>
         <apache.ds.version>2.0.0-M14</apache.ds.version>
     </properties>
     <repositories>
