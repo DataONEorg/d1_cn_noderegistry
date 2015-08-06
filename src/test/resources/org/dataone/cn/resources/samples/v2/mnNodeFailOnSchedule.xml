@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Document   : mnNode.xml
+    Created on : September 20, 2011, 3:42 PM
+    Author     : waltz
+    Description:
+        Purpose of the document follows.
+-->
+<d1:node xmlns:d1="http://ns.dataone.org/service/types/v2"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        replicate="true" synchronize="true" type="mn" state="up">
+    <identifier>urn:node:testMnFailSchd</identifier>
+    <name>localhost-test-2</name>
+    <description>Nowhere Test Member node</description>
+    <baseURL>https://register.nowhere.com/mn2</baseURL>
+    <services>
+        <service name="MNCore" version="v1" available="true"/>
+        <service name="MNRead" version="v1" available="true"/>
+        <service name="MNAuthorization" version="v1" available="true"/>
+        <service name="MNStorage" version="v1" available="true"/>
+        <service name="MNReplication" version="v1" available="false">
+            <restriction methodName="replicate">
+                <subject>cn=test,dc=dataone,dc=org</subject>
+            </restriction>
+        </service>
+    </services>
+    <synchronization>
+        <schedule hour="10-40;13" mday="*" min="0,5,10,15,20,25,30,35,40,45,50,55" mon="11" sec="30" wday="?" year="2001"/>
+        <lastHarvested>1900-01-01T00:00:00.000+00:00</lastHarvested>
+        <lastCompleteHarvest>1900-01-01T00:00:00.000+00:00</lastCompleteHarvest>
+    </synchronization>
+        <nodeReplicationPolicy>
+    	<maxObjectSize>12345</maxObjectSize>
+    	<spaceAllocated>123456789</spaceAllocated>
+    	<allowedNode>urn:node:testNode1</allowedNode>
+    	<allowedNode>urn:node:testNode2</allowedNode>
+    	<allowedObjectFormat>text/plain</allowedObjectFormat>
+    	<allowedObjectFormat>text/xml</allowedObjectFormat>
+    </nodeReplicationPolicy>
+    <subject>cn=test,dc=dataone,dc=org</subject>
+    <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>
+</d1:node>
