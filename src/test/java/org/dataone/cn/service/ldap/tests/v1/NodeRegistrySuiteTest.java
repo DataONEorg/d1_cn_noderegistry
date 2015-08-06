@@ -25,7 +25,7 @@ import org.junit.runners.Suite;
  * @author waltz
  */
 @RunWith(ApacheDSSuiteRunner.class)
-@Suite.SuiteClasses({  HazelcastLdapStoreTestUnit.class, NodeRegistryServiceTestUnit.class })
+@Suite.SuiteClasses({  HazelcastLdapStoreTestUnit.class, NodeRegistryServiceTestUnit.class, org.dataone.cn.service.ldap.tests.v2.NodeRegistryServiceTestUnit.class })
 @CreateDS(allowAnonAccess = false, enableAccessControl=true,  authenticators ={@CreateAuthenticator(type = SimpleAuthenticator.class)} ,name = "org", partitions = { @CreatePartition(name = "org", suffix = "dc=org") })
 @ApplyLdifFiles({"org/dataone/test/apache/directory/server/dataone-schema.ldif", "org/dataone/test/apache/directory/server/dataone-base-data.ldif"})
 @CreateLdapServer(transports = { @CreateTransport(protocol = "LDAP", port=11389) })
