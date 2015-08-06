@@ -17,6 +17,7 @@
  */
 package org.dataone.cn.service.ldap.tests.v2;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -137,6 +138,15 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         log.info(testCNNodeString);
         
         assertTrue(testCNRetrieval.getIdentifier().getValue().equalsIgnoreCase(cnNodeReference.getValue()));
+        
+        // check node property values
+        Node testMNRetrieval = nodeRegistryService.getNode(mnNodeReference);
+        assertNotNull(testMNRetrieval.getPropertyList());
+        assertTrue(testMNRetrieval.getPropertyList().size() > 0);
+        assertEquals(testMNRetrieval.getProperty(0).getKey(), "nodeLatitude");
+        assertEquals(testMNRetrieval.getProperty(0).getValue(), "12.34");
+        assertEquals(testMNRetrieval.getProperty(0).getType(), "testing");
+        
         for (Node node : testNodeList) {
             
             nodeAccess.setNodeApproved(node.getIdentifier(), Boolean.TRUE);
