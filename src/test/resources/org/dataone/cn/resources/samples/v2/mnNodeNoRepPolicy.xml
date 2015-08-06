@@ -7,7 +7,7 @@
     Description:
         Purpose of the document follows.
 -->
-<d1:node xmlns:d1="http://ns.dataone.org/service/types/v2"
+<d1:node xmlns:d1="http://ns.dataone.org/service/types/v2.0"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         replicate="true" synchronize="true" type="mn" state="up">
     <identifier>urn:node:testmn</identifier>
