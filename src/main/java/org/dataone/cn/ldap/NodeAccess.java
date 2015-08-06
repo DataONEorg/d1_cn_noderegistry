@@ -65,6 +65,7 @@ import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.types.v1.Synchronization;
 import org.dataone.service.types.v2.Node;
+import org.dataone.service.types.v2.Property;
 import org.dataone.service.util.DateTimeMarshaller;
 
 /**
@@ -122,6 +123,7 @@ public class NodeAccess extends LDAPService {
 	
     
     private static NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
+    private static NodePropertyAccess nodePropertyAccess = new NodePropertyAccess();
     private static ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
 
     public NodeAccess() {
@@ -1141,6 +1143,14 @@ public class NodeAccess extends LDAPService {
                     }
                 }
             }
+            if ((node.getPropertyList() != null) && (node.getPropertyList().size() > 0)) {
+                for (Property property : node.getPropertyList()) {
+                    String propertyDN = nodePropertyAccess.buildNodePropertyDN(node.getIdentifier(), property);
+                    Attributes propertyAttributes = nodePropertyAccess.mapNodePropertyAttributes(node, property);
+                    ctx.createSubcontext(propertyDN, propertyAttributes);
+                    log.debug("Added Node Property entry " + propertyDN);
+                }
+            }
         } catch (NamingException ex1) {
             ex1.printStackTrace();
             throw new ServiceFailure("0", "Register failed due to LDAP communication failure");
@@ -1200,6 +1210,22 @@ public class NodeAccess extends LDAPService {
                             log.trace("updateNodeCapabilities Added Service Method Restriction entry " + serviceMethodRestrictionDN);
                         }
                     }
+                }
+            }
+            // handle properties
+            List<Property> existingNodeProperties = nodePropertyAccess.getPropertyList(nodeid.getValue());
+            if ((existingNodeProperties != null) && !(existingNodeProperties.isEmpty())) {
+                for (Property removeProperty : existingNodeProperties) {                    
+                    nodePropertyAccess.deleteNodeProperty(nodeid, removeProperty);
+                }
+            }
+            // add in the properties
+            if ((node.getPropertyList() != null) && (node.getPropertyList().size() > 0)) {
+                for (Property property : node.getPropertyList()) {
+                    String propertyDN = nodePropertyAccess.buildNodePropertyDN(node.getIdentifier(), property);
+                    Attributes propertyAttributes = nodePropertyAccess.mapNodePropertyAttributes(node, property);
+                    ctx.createSubcontext(propertyDN, propertyAttributes);
+                    log.debug("Added Node Property entry " + propertyDN);
                 }
             }
             log.debug("Updated NodeCapabilities Node: " + nodeDn);

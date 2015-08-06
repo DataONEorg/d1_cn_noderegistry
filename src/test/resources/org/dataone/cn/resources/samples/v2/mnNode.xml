@@ -40,5 +40,5 @@
     </nodeReplicationPolicy>
     <subject>cn=test,dc=dataone,dc=org</subject>
     <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>
-    
+    <property type="testing" key="nodeLatitude">12.34</property>
 </d1:node>

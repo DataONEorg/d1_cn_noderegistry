@@ -26,11 +26,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import javax.naming.NameNotFoundException;
 import javax.naming.NamingException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dataone.cn.ldap.NodeAccess;
+import org.dataone.cn.ldap.NodePropertyAccess;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
 import org.dataone.cn.quartz.CronExpression;
@@ -42,6 +45,7 @@ import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v2.Node;
 import org.dataone.service.types.v2.NodeList;
+import org.dataone.service.types.v2.Property;
 import org.dataone.service.types.v1.NodeReference;
 import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
@@ -75,6 +79,7 @@ public class NodeRegistryService {
     public static Log log = LogFactory.getLog(NodeRegistryService.class);
     private static NodeAccess nodeAccess = new NodeAccess();
     private static NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
+    private static NodePropertyAccess nodePropertyAccess = new NodePropertyAccess();
     private static ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
     static Pattern excludeNodeBaseURLPattern = Pattern.compile("^https?\\:\\/\\/(?:(?:localhost(?:\\:8080)?\\/)|(?:127\\.0)).+");
     static Pattern validNodeIdPattern = Pattern.compile(Settings.getConfiguration().getString("cn.nodeId.validation"));
@@ -114,6 +119,11 @@ public class NodeRegistryService {
                 services.setServiceList(serviceList);
                 node.setServices(services);
             }
+            
+            // set the property list
+            List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier);
+            node.setPropertyList(propertyList);
+            
         }
         nodeList.setNodeList(allNodes);
         return nodeList;
@@ -157,6 +167,9 @@ public class NodeRegistryService {
             node.setServices(services);
 
         }
+        // set the property list
+        List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier.getValue());
+        node.setPropertyList(propertyList);
 
         return node;
     }
@@ -191,6 +204,10 @@ public class NodeRegistryService {
             services.setServiceList(serviceList);
             node.setServices(services);
         }
+        
+        // set the property list
+        List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier.getValue());
+        node.setPropertyList(propertyList);
 
         return node;
     }
@@ -334,6 +351,13 @@ public class NodeRegistryService {
                         throw new ServiceFailure("0", "Unable to delete service " + nodeServicesAccess.buildNodeServiceDN(nodeReference, service));
                     }
                 }
+            }
+            // delete the properties
+            List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeReference.getValue());
+            if (propertyList != null && propertyList.size() > 0) {
+            	for (Property property: propertyList) {
+            		nodePropertyAccess.deleteNodeProperty(nodeReference, property);
+            	}
             }
             nodeAccess.deleteNode(nodeReference);
         }
