@@ -51,6 +51,8 @@ import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v2.Node;
 import org.dataone.service.types.v2.NodeList;
+import org.dataone.service.types.v2.Property;
+import org.dataone.service.types.v1.Checksum;
 import org.dataone.service.types.v1.NodeReference;
 import org.dataone.service.types.v1.NodeReplicationPolicy;
 import org.dataone.service.types.v1.ObjectFormatIdentifier;
@@ -59,6 +61,7 @@ import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
 import org.dataone.service.types.v1.Synchronization;
+import org.dataone.service.types.v1.util.ChecksumUtil;
 import org.dataone.service.util.TypeMarshaller;
 import org.dataone.test.apache.directory.server.integ.ApacheDSSuiteRunner;
 import org.jibx.runtime.JiBXException;
@@ -143,9 +146,26 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         Node testMNRetrieval = nodeRegistryService.getNode(mnNodeReference);
         assertNotNull(testMNRetrieval.getPropertyList());
         assertTrue(testMNRetrieval.getPropertyList().size() > 0);
-        assertEquals(testMNRetrieval.getProperty(0).getKey(), "nodeLatitude");
-        assertEquals(testMNRetrieval.getProperty(0).getValue(), "12.34");
-        assertEquals(testMNRetrieval.getProperty(0).getType(), "testing");
+        int found = 0;
+        for (Property property: testMNRetrieval.getPropertyList()) {
+        	if (property.getKey().equals("nodeLatitude")) {
+        		assertEquals("nodeLatitude", property.getKey());
+                assertEquals("12.34", property.getValue());
+                assertEquals("testing", property.getType());
+                found++;
+        	}
+        	if (property.getKey().equals("nodeImage")) {
+        		assertEquals("nodeImage", property.getKey());
+        		String value = property.getValue();
+        		Checksum checksum = ChecksumUtil.checksum(value.getBytes("UTF-8"), "MD5");
+        		Checksum expectedChecksum = new Checksum();
+        		expectedChecksum.setAlgorithm("MD5");
+        		expectedChecksum.setValue("783d774326924da6004c2a793576531f");
+                assertTrue(ChecksumUtil.areChecksumsEqual(checksum, expectedChecksum));
+                found++;
+        	}
+        }
+        assertTrue(found == 2);
         
         for (Node node : testNodeList) {
             
