@@ -55,6 +55,15 @@ public class LdapPopulationService extends LDAPService {
                 String serviceNodeDn = searchR.getNameInNamespace();
                 removeEntry(serviceNodeDn);
             }
+           //Find all Properties
+            NamingEnumeration<SearchResult> propertyNodeResults =
+                    ctx.search(base, "(&(objectClass=d1NodeProperty)(d1NodeId=" + nodeReference + "))", ctls);
+            while (propertyNodeResults != null && propertyNodeResults.hasMore()) {
+                SearchResult searchR = propertyNodeResults.next();
+                String propertyNodeDn = searchR.getNameInNamespace();
+                removeEntry(propertyNodeDn);
+            }
+            
             removeEntry(nodeDn);
 
         }
