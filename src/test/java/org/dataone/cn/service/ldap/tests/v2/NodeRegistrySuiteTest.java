@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package org.dataone.cn.service.ldap.tests.v1;
+package org.dataone.cn.service.ldap.tests.v2;
 
 
 import org.apache.directory.server.annotations.CreateLdapServer;
@@ -25,7 +25,7 @@ import org.junit.runners.Suite;
  * @author waltz
  */
 @RunWith(ApacheDSSuiteRunner.class)
-@Suite.SuiteClasses({  HazelcastLdapStoreTestUnit.class, NodeRegistryServiceTestUnit.class })
+@Suite.SuiteClasses({  NodeRegistryServiceTestUnit.class })
 @CreateDS(allowAnonAccess = false, enableAccessControl=true,  authenticators ={@CreateAuthenticator(type = SimpleAuthenticator.class)} ,name = "org", partitions = { @CreatePartition(name = "org", suffix = "dc=org") })
 @ApplyLdifFiles({"org/dataone/test/apache/directory/server/dataone-schema.ldif", "org/dataone/test/apache/directory/server/dataone-base-data.ldif"})
 @CreateLdapServer(transports = { @CreateTransport(protocol = "LDAP", port=11389) })
