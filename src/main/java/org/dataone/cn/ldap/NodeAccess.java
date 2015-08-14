@@ -1172,6 +1172,8 @@ public class NodeAccess extends LDAPService {
     public void updateNode(Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
 
         try {
+            log.debug("(a) updateNode being called");
+
             DirContext ctx = getContext();
             NodeReference nodeid = node.getIdentifier();
             String nodeDn = buildNodeDN(nodeid);
@@ -1180,6 +1182,8 @@ public class NodeAccess extends LDAPService {
             ModificationItem[] modificationArray = new ModificationItem[modificationItemList.size()];
             modificationArray = modificationItemList.toArray(modificationArray);
             ctx.modifyAttributes(nodeDn, modificationArray);
+            
+            log.debug("(b) modified using attributesMap");
 
             // easiest to remove existingServices and then adding the new ones back
             List<Service> existingNodeServices = nodeServicesAccess.getServiceList(nodeid.getValue());
@@ -1195,6 +1199,8 @@ public class NodeAccess extends LDAPService {
                     nodeServicesAccess.deleteNodeService(nodeid, removeService);
                 }
             }
+            log.debug("(c) removed services");
+
             // add in the services
             if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
                 for (Service service : node.getServices().getServiceList()) {
@@ -1212,6 +1218,8 @@ public class NodeAccess extends LDAPService {
                     }
                 }
             }
+            log.debug("(d) re-added services");
+
             // handle properties
             List<Property> existingNodeProperties = nodePropertyAccess.getPropertyList(nodeid.getValue());
             if ((existingNodeProperties != null) && !(existingNodeProperties.isEmpty())) {
@@ -1219,6 +1227,8 @@ public class NodeAccess extends LDAPService {
                     nodePropertyAccess.deleteNodeProperty(nodeid, removeProperty);
                 }
             }
+            log.debug("(e) removed properties");
+
             // add in the properties
             if ((node.getPropertyList() != null) && (node.getPropertyList().size() > 0)) {
                 for (Property property : node.getPropertyList()) {
@@ -1228,6 +1238,8 @@ public class NodeAccess extends LDAPService {
                     log.debug("Added Node Property entry " + propertyDN);
                 }
             }
+            log.debug("(f) re-added properties");
+
             log.debug("Updated NodeCapabilities Node: " + nodeDn);
         } catch (NamingException ex) {
             ex.printStackTrace();
