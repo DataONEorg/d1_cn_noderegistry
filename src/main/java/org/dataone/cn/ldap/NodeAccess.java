@@ -1179,6 +1179,11 @@ public class NodeAccess extends LDAPService {
             String nodeDn = buildNodeDN(nodeid);
             HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeDn);
             List<ModificationItem> modificationItemList = mapNodeModificationItemList(attributesMap, node);
+            for (ModificationItem item: modificationItemList) {
+            	String id = item.getAttribute().getID();
+            	Object value = item.getAttribute().get();
+            	log.debug("updating node attribute: " + id + "=" + value);
+            }
             ModificationItem[] modificationArray = new ModificationItem[modificationItemList.size()];
             modificationArray = modificationItemList.toArray(modificationArray);
             ctx.modifyAttributes(nodeDn, modificationArray);
