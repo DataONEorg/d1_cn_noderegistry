@@ -920,8 +920,8 @@ public class NodeAccess extends LDAPService {
         modificationItemList.addAll(calcModifications(NODE_DESCRIPTION, attributesMap, node.getDescription()));
         modificationItemList.addAll(calcSubjectListModifications(NODE_SUBJECT, attributesMap, node.getSubjectList()));
         modificationItemList.addAll(calcSubjectListModifications(NODE_CONTACT_SUBJECT, attributesMap, node.getContactSubjectList()));
-        modificationItemList.addAll(calcModifications(NODE_REPLICATE, attributesMap, String.valueOf(node.isReplicate())));
-        modificationItemList.addAll(calcModifications(NODE_SYNCHRONIZE, attributesMap, String.valueOf(node.isSynchronize())));
+        modificationItemList.addAll(calcModifications(NODE_REPLICATE, attributesMap, String.valueOf(node.isReplicate()).toUpperCase()));
+        modificationItemList.addAll(calcModifications(NODE_SYNCHRONIZE, attributesMap, String.valueOf(node.isSynchronize()).toUpperCase()));
         modificationItemList.addAll(calcModifications(NODE_STATE, attributesMap, String.valueOf(node.getState().xmlValue())));
 
         if (attributesMap.containsKey(NODE_TYPE.toLowerCase())) {
