@@ -46,6 +46,7 @@ import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
 import org.dataone.service.types.v1.Subject;
+import org.dataone.service.types.v2.TypeFactory;
 import org.dataone.service.util.TypeMarshaller;
 import org.dataone.test.apache.directory.server.integ.ApacheDSSuiteRunner;
 import org.junit.Before;
@@ -152,7 +153,7 @@ public class HazelcastLdapStoreTestUnit extends AbstractLdapTestUnit {
             
             d1NodesMap.get(nodeReference);
             
-            d1NodesMap.put(nodeReference, TypeMarshaller.convertTypeFromType(testNode, org.dataone.service.types.v2.Node.class));
+            d1NodesMap.put(nodeReference, TypeFactory.convertTypeFromType(testNode, org.dataone.service.types.v2.Node.class));
 
             Node node = d1NodesMap.get(nodeReference);
             assertTrue(node.isReplicate() == false);
