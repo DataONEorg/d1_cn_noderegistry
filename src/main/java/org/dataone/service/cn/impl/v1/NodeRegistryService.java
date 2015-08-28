@@ -31,7 +31,7 @@ import org.dataone.service.exceptions.ServiceFailure;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.NodeList;
 import org.dataone.service.types.v1.NodeReference;
-import org.dataone.service.util.TypeMarshaller;
+import org.dataone.service.types.v2.TypeFactory;
 
 /**
  * Though this is an implementation based on the CNRegister interface.
@@ -83,7 +83,7 @@ public class NodeRegistryService {
         // TODO: which is the better approach for serializing the structures?
         // can we just convert the NodeList without iterating?
         try {
-        	nodeList = TypeMarshaller.convertTypeFromType(nodes, NodeList.class);
+        	nodeList = TypeFactory.convertTypeFromType(nodes, NodeList.class);
         } catch (Exception e) {
         	
         	// or do we need to iterate over the nodes and convert one by one?
@@ -91,7 +91,7 @@ public class NodeRegistryService {
         	for (org.dataone.service.types.v2.Node n: nodes.getNodeList()) {
         		Node currentNode = null;
     			try {
-    				currentNode = TypeMarshaller.convertTypeFromType(n, Node.class);
+    				currentNode = TypeFactory.convertTypeFromType(n, Node.class);
     			} catch (Exception ee) {
     				throw new ServiceFailure("0000", ee.getMessage());
     			}
@@ -117,7 +117,7 @@ public class NodeRegistryService {
 
     	Node node = null;
     	try {
-        	node = TypeMarshaller.convertTypeFromType(impl.getNode(nodeIdentifier), Node.class);
+        	node = TypeFactory.convertTypeFromType(impl.getNode(nodeIdentifier), Node.class);
         } catch (Exception e) {
         	e.printStackTrace();
 			throw new ServiceFailure("0000", e.getClass().getSimpleName() + ":" + e.getMessage());        	
@@ -141,7 +141,7 @@ public class NodeRegistryService {
 
     	Node node = null;
     	try {
-        	node = TypeMarshaller.convertTypeFromType(impl.getApprovedNode(nodeIdentifier), Node.class);
+        	node = TypeFactory.convertTypeFromType(impl.getApprovedNode(nodeIdentifier), Node.class);
         } catch (Exception e) {
 			throw new ServiceFailure("0000", e.getMessage());        	
         }
@@ -166,7 +166,7 @@ public class NodeRegistryService {
     public NodeReference register(Node node) throws ServiceFailure, InvalidRequest, IdentifierNotUnique, NotImplemented  {
     	org.dataone.service.types.v2.Node currentNode = null;
     	try {
-    		currentNode = TypeMarshaller.convertTypeFromType(node, org.dataone.service.types.v2.Node.class);
+    		currentNode = TypeFactory.convertTypeFromType(node, org.dataone.service.types.v2.Node.class);
         } catch (Exception e) {
 			throw new ServiceFailure("0000", e.getMessage());        	
         }
@@ -194,7 +194,7 @@ public class NodeRegistryService {
     public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
     	org.dataone.service.types.v2.Node currentNode = null;
     	try {
-    		currentNode = TypeMarshaller.convertTypeFromType(node, org.dataone.service.types.v2.Node.class);
+    		currentNode = TypeFactory.convertTypeFromType(node, org.dataone.service.types.v2.Node.class);
         } catch (Exception e) {
         	e.printStackTrace();
 			throw new ServiceFailure("0000", e.getClass().getSimpleName() + ":" + e.getMessage());        	
