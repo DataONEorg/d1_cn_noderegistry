@@ -140,22 +140,22 @@ public class NodeRegistryService {
      * 
      */
 
-    public Node getNode(NodeReference nodeIdentifier) throws ServiceFailure, NotFound {
+    public Node getNode(NodeReference nodeReference) throws ServiceFailure, NotFound {
 
-        String dnNodeIdentifier = nodeAccess.buildNodeDN(nodeIdentifier);
+        
         Node node = null;
         try {
-            node = nodeAccess.getNode(dnNodeIdentifier);
+            node = nodeAccess.getNode(nodeReference);
         } catch (NameNotFoundException ex) {
-            log.warn("Node not found: " + nodeIdentifier.getValue());
+            log.warn("Node not found: " + nodeReference.getValue());
             throw new NotFound("4842", ex.getMessage());
         } catch (NamingException ex) {
             throw new ServiceFailure("4842", ex.getMessage());
         }
 
 
-        log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
-        List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier.getValue());
+        log.debug(nodeReference.getValue() + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
+        List<Service> serviceList = nodeServicesAccess.getServiceList(nodeReference.getValue());
         if (!serviceList.isEmpty()) {
             for (Service service : serviceList) {
                 String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
@@ -168,7 +168,7 @@ public class NodeRegistryService {
 
         }
         // set the property list
-        List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier.getValue());
+        List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeReference.getValue());
         node.setPropertyList(propertyList);
 
         return node;
@@ -187,10 +187,7 @@ public class NodeRegistryService {
 
     public Node getApprovedNode(NodeReference nodeIdentifier) throws ServiceFailure, NotFound {
 
-        String dnNodeIdentifier = nodeAccess.buildNodeDN(nodeIdentifier);
-        Node node = null;
-
-        node = nodeAccess.getApprovedNode(dnNodeIdentifier);
+        Node node = nodeAccess.getApprovedNode(nodeIdentifier);
 
         log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
         List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier.getValue());

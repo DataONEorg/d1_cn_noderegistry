@@ -161,9 +161,9 @@ public class NodeAccess extends LDAPService {
      * @throws NamingException
      * 
      */
-    public HashMap<String, NamingEnumeration<?>> buildNodeAttributeMap(String nodeDN) throws NamingException {
+    public HashMap<String, NamingEnumeration<?>> buildNodeAttributeMap(NodeReference nodeReference) throws NamingException {
         HashMap<String, NamingEnumeration<?>> attributesMap = new HashMap<String, NamingEnumeration<?>>();
-
+        String nodeDN = buildNodeDN(nodeReference);
         DirContext ctx = getContext();
         Attributes attributes = ctx.getAttributes(nodeDN);
         NamingEnumeration<? extends Attribute> values = attributes.getAll();
@@ -367,17 +367,17 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Date getLogLastAggregated(NodeReference nodeIdentifier) throws ServiceFailure {
+    public Date getLogLastAggregated(NodeReference nodeReference) throws ServiceFailure {
         Date logLastAggregated = null;
         try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(buildNodeDN(nodeIdentifier));
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
             if (attributesMap.containsKey("d1nodeloglastaggregated")) {
                 logLastAggregated = DateTimeMarshaller.deserializeDateToUTC(getEnumerationValueString(attributesMap.get("d1nodeloglastaggregated")));
             }
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("Problem retrieving d1nodeloglastaggregated of " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "Could retrieve d1nodeloglastaggregated from: " + nodeIdentifier + " " + e.getMessage());
+            log.error("Problem retrieving d1nodeloglastaggregated of " + nodeReference.getValue(), e);
+            throw new ServiceFailure("4801", "Could retrieve d1nodeloglastaggregated from: " + nodeReference.getValue() + " " + e.getMessage());
         }
         return logLastAggregated;
     }
@@ -392,13 +392,13 @@ public class NodeAccess extends LDAPService {
      * @throws NameNotFoundException
      * 
      */
-    public Node getNode(String nodeDN) throws NotFound, NamingException, NameNotFoundException {
+    public Node getNode(NodeReference nodeReference) throws NotFound, NamingException, NameNotFoundException {
 
-        HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeDN);
-        log.debug("Retrieved Node for: " + nodeDN);
+        HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
+        log.debug("Retrieved Node for: " + nodeReference.getValue());
 
         if (attributesMap.isEmpty()) {
-            throw new NotFound("4801", nodeDN + " not found on the server");
+            throw new NotFound("4801", nodeReference.getValue() + " not found on the server");
         }
 
         return this.mapBasicNodeProperties(attributesMap, new Node());
@@ -414,42 +414,42 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Node getApprovedNode(String nodeIdentifier) throws ServiceFailure, NotFound {
+    public Node getApprovedNode(NodeReference nodeReference) throws ServiceFailure, NotFound {
         Boolean nodeApproved = false;
         HashMap<String, NamingEnumeration<?>> attributesMap;
         try {
-            attributesMap = buildNodeAttributeMap(nodeIdentifier);
+            attributesMap = buildNodeAttributeMap(nodeReference);
         } catch (NameNotFoundException e) {
-            throw new NotFound("4801", nodeIdentifier + " not found on the server");
+            throw new NotFound("4801", nodeReference.getValue() + " not found on the server");
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("buildNodeAttributeMap- Problem determining approved state " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "buildNodeAttributeMap- Could not determine approved state of : " + nodeIdentifier + " " + e.getMessage());
+            log.error("buildNodeAttributeMap- Problem determining approved state " + nodeReference.getValue(), e);
+            throw new ServiceFailure("4801", "buildNodeAttributeMap- Could not determine approved state of : " + nodeReference.getValue() + " " + e.getMessage());
         }
         if (attributesMap.isEmpty()) {
-            throw new NotFound("4801", nodeIdentifier + " not found on the server");
+            throw new NotFound("4801", nodeReference.getValue() + " not found on the server");
         }
         if (attributesMap.containsKey(NODE_APPROVED.toLowerCase())) {
             try {
                 nodeApproved = Boolean.valueOf(getEnumerationValueString(attributesMap.get(NODE_APPROVED.toLowerCase())));
             } catch (Exception e) {
                 e.printStackTrace();
-                log.error("getEnumerationValueString- Problem determining approved state " + nodeIdentifier, e);
-                throw new ServiceFailure("4801", "getEnumerationValueString- Could not determine approved state of : " + nodeIdentifier + " " + e.getMessage());
+                log.error("getEnumerationValueString- Problem determining approved state " + nodeReference.getValue(), e);
+                throw new ServiceFailure("4801", "getEnumerationValueString- Could not determine approved state of : " + nodeReference.getValue() + " " + e.getMessage());
             }
         } else {
-            log.error("attributesMap.containsKey- Problem determining approved state " + nodeIdentifier);
-            throw new ServiceFailure("4801", "attributesMap.containsKey- Could not determine approved state of : " + nodeIdentifier);   
+            log.error("attributesMap.containsKey- Problem determining approved state " + nodeReference.getValue());
+            throw new ServiceFailure("4801", "attributesMap.containsKey- Could not determine approved state of : " + nodeReference.getValue());   
         }
 
 
         if (!nodeApproved) {
-            throw new NotFound("4801", nodeIdentifier + " not approved on the server");
+            throw new NotFound("4801", nodeReference.getValue() + " not approved on the server");
         }
         try {
             return this.mapBasicNodeProperties(attributesMap, new Node());
         } catch (NameNotFoundException ex) {
-            log.warn("Node not found: " + nodeIdentifier);
+            log.warn("Node not found: " + nodeReference.getValue());
             throw new NotFound("4842", ex.getMessage());
         } catch (NamingException ex) {
             throw new ServiceFailure("4842", ex.getMessage());
@@ -463,10 +463,10 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Boolean getNodeApproved(NodeReference nodeIdentifier) throws ServiceFailure {
+    public Boolean getNodeApproved(NodeReference nodeReference) throws ServiceFailure {
         Boolean nodeApproved = false;
         try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(buildNodeDN(nodeIdentifier));
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
             if (attributesMap.containsKey(NODE_APPROVED.toLowerCase())) {
                 String nodeApprovedStr = getEnumerationValueString(attributesMap.get(NODE_APPROVED.toLowerCase()));
                 
@@ -474,8 +474,8 @@ public class NodeAccess extends LDAPService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("Problem determining approved state " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "Could not determine approved state of : " + nodeIdentifier + " " + e.getMessage());
+            log.error("Problem determining approved state " + nodeReference.getValue(), e);
+            throw new ServiceFailure("4801", "Could not determine approved state of : " + nodeReference.getValue() + " " + e.getMessage());
         }
         return nodeApproved;
 
@@ -591,17 +591,17 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public ProcessingState getProcessingState(NodeReference nodeIdentifier) throws ServiceFailure {
+    public ProcessingState getProcessingState(NodeReference nodeReference) throws ServiceFailure {
         ProcessingState processingState = null;
         try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(buildNodeDN(nodeIdentifier));
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
             if (attributesMap.containsKey(PROCESSING_STATE.toLowerCase())) {
                 processingState = ProcessingState.convert(getEnumerationValueString(attributesMap.get(PROCESSING_STATE.toLowerCase())));
             }
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("Problem determining processing state " + nodeIdentifier, e);
-            throw new ServiceFailure("4801", "Could not determine state of : " + nodeIdentifier + " " + e.getMessage());
+            log.error("Problem determining processing state " + nodeReference.getValue(), e);
+            throw new ServiceFailure("4801", "Could not determine state of : " + nodeReference.getValue() + " " + e.getMessage());
         }
         return processingState;
     }
@@ -623,7 +623,7 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Boolean getAggregateLogs(NodeReference nodeIdentifier) throws ServiceFailure {
+    public Boolean getAggregateLogs(NodeReference nodeReference) throws ServiceFailure {
         // since this attribute will not be prepopulated, return true as the default
         // it will be populated once it is set to false before the initial run
         // of course this leaves a race condition if the first run of a node
@@ -632,7 +632,7 @@ public class NodeAccess extends LDAPService {
         // will be dealt with in the logAgg code and not here
         Boolean aggregateLogs = Boolean.valueOf(true);
         try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(buildNodeDN(nodeIdentifier));
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
             if (attributesMap.containsKey(AGGREGATE_LOGS.toLowerCase())) {
 
                  aggregateLogs =   Boolean.valueOf(getEnumerationValueString(attributesMap.get(AGGREGATE_LOGS.toLowerCase())));
@@ -640,7 +640,7 @@ public class NodeAccess extends LDAPService {
             } else {
                 // It not exist, so create it
  
-                String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
+                String dnNodeIdentifier = buildNodeDN(nodeReference);
                 Attribute d1NodeAggregateLogs = new BasicAttribute(AGGREGATE_LOGS, Boolean.toString(aggregateLogs).toUpperCase());
                 // get a handle to an Initial DirContext
                 DirContext ctx = getContext();
@@ -655,8 +655,8 @@ public class NodeAccess extends LDAPService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("Problem determining processing state " + nodeIdentifier + " of attribute" + AGGREGATE_LOGS, e);
-            throw new ServiceFailure("4801", "Could not determine state of : " + nodeIdentifier + " of attribute " + AGGREGATE_LOGS + " " + e.getMessage());
+            log.error("Problem determining processing state " + nodeReference.getValue() + " of attribute" + AGGREGATE_LOGS, e);
+            throw new ServiceFailure("4801", "Could not determine state of : " + nodeReference.getValue() + " of attribute " + AGGREGATE_LOGS + " " + e.getMessage());
         }
         return aggregateLogs;
     }
@@ -1176,8 +1176,7 @@ public class NodeAccess extends LDAPService {
 
             DirContext ctx = getContext();
             NodeReference nodeid = node.getIdentifier();
-            String nodeDn = buildNodeDN(nodeid);
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeDn);
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeid);
             List<ModificationItem> modificationItemList = mapNodeModificationItemList(attributesMap, node);
             for (ModificationItem item: modificationItemList) {
             	String id = item.getAttribute().getID();
@@ -1186,7 +1185,7 @@ public class NodeAccess extends LDAPService {
             }
             ModificationItem[] modificationArray = new ModificationItem[modificationItemList.size()];
             modificationArray = modificationItemList.toArray(modificationArray);
-            ctx.modifyAttributes(nodeDn, modificationArray);
+            ctx.modifyAttributes(buildNodeDN(nodeid), modificationArray);
             
             log.debug("(b) modified using attributesMap");
 
@@ -1245,7 +1244,7 @@ public class NodeAccess extends LDAPService {
             }
             log.debug("(f) re-added properties");
 
-            log.debug("Updated NodeCapabilities Node: " + nodeDn);
+            log.debug("Updated NodeCapabilities Node: " + nodeid.getValue());
         } catch (NamingException ex) {
             ex.printStackTrace();
             throw new ServiceFailure("0", "updateNodeCapabilities failed due to LDAP communication failure:: " + 
