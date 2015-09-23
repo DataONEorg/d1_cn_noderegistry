@@ -877,8 +877,10 @@ public class NodeAccess extends LDAPService {
         /* Node Replication Policy items */
         NodeReplicationPolicy nrp = node.getNodeReplicationPolicy();
         if (nrp != null)  {
-        	nodeAttributes.put(new BasicAttribute(REP_POLICY_MAXOBJECTSIZE, nrp.getMaxObjectSize().toString()));
-        	nodeAttributes.put(new BasicAttribute(REP_POLICY_SPACEALLOCATED, nrp.getSpaceAllocated().toString()));
+            if (nrp.getMaxObjectSize() != null)
+                nodeAttributes.put(new BasicAttribute(REP_POLICY_MAXOBJECTSIZE, nrp.getMaxObjectSize().toString()));
+            if (nrp.getSpaceAllocated() != null)
+                nodeAttributes.put(new BasicAttribute(REP_POLICY_SPACEALLOCATED, nrp.getSpaceAllocated().toString()));
         	if (nrp.getAllowedNodeList() != null && !nrp.getAllowedNodeList().isEmpty()) {
         		Attribute allowedNodes = new BasicAttribute(REP_POLICY_ALLOWEDNODE);
         		for (NodeReference nr : nrp.getAllowedNodeList()) {
