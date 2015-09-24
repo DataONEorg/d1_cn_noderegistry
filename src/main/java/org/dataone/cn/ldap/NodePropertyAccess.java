@@ -187,7 +187,9 @@ public class NodePropertyAccess extends LDAPService {
 
         propertyAttributes.put(new BasicAttribute(NODE_PROPERTY_KEY, property.getKey()));
         propertyAttributes.put(new BasicAttribute(NODE_PROPERTY_VALUE, property.getValue()));
-        propertyAttributes.put(new BasicAttribute(NODE_PROPERTY_TYPE, property.getType()));
+        if (property.getType() != null) {
+        	propertyAttributes.put(new BasicAttribute(NODE_PROPERTY_TYPE, property.getType()));
+        }
         return propertyAttributes;
     }
 
