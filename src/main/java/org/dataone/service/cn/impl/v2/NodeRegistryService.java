@@ -22,10 +22,8 @@
 
 package org.dataone.service.cn.impl.v2;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -132,24 +130,6 @@ public class NodeRegistryService {
         }
         nodeList.setNodeList(allNodes);
         return nodeList;
-    }
-
-    public Set<NodeReference> getNodeReferences() {
-        Set<NodeReference> nodeRefs = new HashSet<NodeReference>();
-        try {
-            for (Node node : listNodes().getNodeList()) {
-                NodeReference nodeRef = new NodeReference();
-                nodeRef.setValue(node.getIdentifier().getValue());
-                nodeRefs.add(nodeRef);
-            }
-        } catch (NotImplemented ni) {
-            log.error("Unable to get node list from node registry service", ni);
-            ni.printStackTrace();
-        } catch (ServiceFailure sf) {
-            log.error("Unable to get node list from node registry service", sf);
-            sf.printStackTrace();
-        }
-        return nodeRefs;
     }
 
     /*
