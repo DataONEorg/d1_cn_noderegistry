@@ -22,8 +22,10 @@
 
 package org.dataone.service.cn.impl.v2;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,13 +45,13 @@ import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotFound;
 import org.dataone.service.exceptions.NotImplemented;
 import org.dataone.service.exceptions.ServiceFailure;
-import org.dataone.service.types.v2.Node;
-import org.dataone.service.types.v2.NodeList;
-import org.dataone.service.types.v2.Property;
 import org.dataone.service.types.v1.NodeReference;
 import org.dataone.service.types.v1.Service;
 import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
+import org.dataone.service.types.v2.Node;
+import org.dataone.service.types.v2.NodeList;
+import org.dataone.service.types.v2.Property;
 
 /**
  * Though this is an implementation based on the CNRegister interface.
@@ -81,8 +83,10 @@ public class NodeRegistryService {
     private static NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
     private static NodePropertyAccess nodePropertyAccess = new NodePropertyAccess();
     private static ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
-    static Pattern excludeNodeBaseURLPattern = Pattern.compile("^https?\\:\\/\\/(?:(?:localhost(?:\\:8080)?\\/)|(?:127\\.0)).+");
-    static Pattern validNodeIdPattern = Pattern.compile(Settings.getConfiguration().getString("cn.nodeId.validation"));
+    static Pattern excludeNodeBaseURLPattern = Pattern
+            .compile("^https?\\:\\/\\/(?:(?:localhost(?:\\:8080)?\\/)|(?:127\\.0)).+");
+    static Pattern validNodeIdPattern = Pattern.compile(Settings.getConfiguration().getString(
+            "cn.nodeId.validation"));
 
     /*
      * Retreive a list of nodes that have been registered and approved
@@ -102,14 +106,15 @@ public class NodeRegistryService {
         for (Node node : allNodes) {
 
             String nodeIdentifier = node.getIdentifier().getValue();
-            log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() );
+            log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL());
             List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier);
             if (!serviceList.isEmpty()) {
                 for (Service service : serviceList) {
                     String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
                     ;
                     log.trace("\t has service " + nodeServiceId);
-                    List<ServiceMethodRestriction> restrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(nodeIdentifier, nodeServiceId);
+                    List<ServiceMethodRestriction> restrictionList = serviceMethodRestrictionsAccess
+                            .getServiceMethodRestrictionList(nodeIdentifier, nodeServiceId);
                     for (ServiceMethodRestriction restrict : restrictionList) {
                         log.trace("\t\t has restriction" + restrict.getMethodName());
                     }
@@ -119,15 +124,34 @@ public class NodeRegistryService {
                 services.setServiceList(serviceList);
                 node.setServices(services);
             }
-            
+
             // set the property list
             List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier);
             node.setPropertyList(propertyList);
-            
+
         }
         nodeList.setNodeList(allNodes);
         return nodeList;
     }
+
+    public Set<NodeReference> getNodeReferences() {
+        Set<NodeReference> nodeRefs = new HashSet<NodeReference>();
+        try {
+            for (Node node : listNodes().getNodeList()) {
+                NodeReference nodeRef = new NodeReference();
+                nodeRef.setValue(node.getIdentifier().getValue());
+                nodeRefs.add(nodeRef);
+            }
+        } catch (NotImplemented ni) {
+            log.error("Unable to get node list from node registry service", ni);
+            ni.printStackTrace();
+        } catch (ServiceFailure sf) {
+            log.error("Unable to get node list from node registry service", sf);
+            sf.printStackTrace();
+        }
+        return nodeRefs;
+    }
+
     /*
      * Retreive a node that have been registered
      * within the DataONE infrastructure.
@@ -142,7 +166,6 @@ public class NodeRegistryService {
 
     public Node getNode(NodeReference nodeReference) throws ServiceFailure, NotFound {
 
-        
         Node node = null;
         try {
             node = nodeAccess.getNode(nodeReference);
@@ -153,14 +176,16 @@ public class NodeRegistryService {
             throw new ServiceFailure("4842", ex.getMessage());
         }
 
-
-        log.debug(nodeReference.getValue() + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
+        log.debug(nodeReference.getValue() + " " + node.getName() + " " + node.getBaseURL() + " "
+                + node.getBaseURL());
         List<Service> serviceList = nodeServicesAccess.getServiceList(nodeReference.getValue());
         if (!serviceList.isEmpty()) {
             for (Service service : serviceList) {
                 String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
 
-                service.setRestrictionList(serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(node.getIdentifier().getValue(), nodeServiceId));
+                service.setRestrictionList(serviceMethodRestrictionsAccess
+                        .getServiceMethodRestrictionList(node.getIdentifier().getValue(),
+                                nodeServiceId));
             }
             Services services = new Services();
             services.setServiceList(serviceList);
@@ -173,6 +198,7 @@ public class NodeRegistryService {
 
         return node;
     }
+
     /*
      * Retreive a node that have been registered and approved
      * within the DataONE infrastructure.
@@ -189,25 +215,29 @@ public class NodeRegistryService {
 
         Node node = nodeAccess.getApprovedNode(nodeIdentifier);
 
-        log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " " + node.getBaseURL());
+        log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " "
+                + node.getBaseURL());
         List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier.getValue());
         if (!serviceList.isEmpty()) {
             for (Service service : serviceList) {
                 String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
 
-                service.setRestrictionList(serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(node.getIdentifier().getValue(), nodeServiceId));
+                service.setRestrictionList(serviceMethodRestrictionsAccess
+                        .getServiceMethodRestrictionList(node.getIdentifier().getValue(),
+                                nodeServiceId));
             }
             Services services = new Services();
             services.setServiceList(serviceList);
             node.setServices(services);
         }
-        
+
         // set the property list
         List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier.getValue());
         node.setPropertyList(propertyList);
 
         return node;
     }
+
     /*
      * Create a new node in the system. The node will be marked as unapproved until
      * an Administrator confirms the registration is authentic. The returned NodeReference
@@ -223,15 +253,19 @@ public class NodeRegistryService {
      * 
      */
 
-    public NodeReference register(Node node) throws ServiceFailure, InvalidRequest, IdentifierNotUnique, NotImplemented  {
+    public NodeReference register(Node node) throws ServiceFailure, InvalidRequest,
+            IdentifierNotUnique, NotImplemented {
         // do not allow localhost to be baseURL of a node
         Matcher httpPatternMatcher = excludeNodeBaseURLPattern.matcher(node.getBaseURL());
         if (httpPatternMatcher.find()) {
-            throw new InvalidRequest("4823", "BaseURL may not point to localhost! " + node.getBaseURL());
+            throw new InvalidRequest("4823", "BaseURL may not point to localhost! "
+                    + node.getBaseURL());
         }
         Matcher validNodeIdMatcher = validNodeIdPattern.matcher(node.getIdentifier().getValue());
         if (!validNodeIdMatcher.matches()) {
-            throw new InvalidRequest("4823", "Problem registring " + node.getIdentifier().getValue() + "-" + Settings.getConfiguration().getString("cn.nodeId.validation.errorText"));
+            throw new InvalidRequest("4823", "Problem registring "
+                    + node.getIdentifier().getValue() + "-"
+                    + Settings.getConfiguration().getString("cn.nodeId.validation.errorText"));
         }
         // validate that the node Id in the node structure is unique and conforms
         // to the naming convention rules and max length rules
@@ -239,7 +273,8 @@ public class NodeRegistryService {
         String newBaseUrl = node.getBaseURL();
         Map<String, String> nodeIds = nodeAccess.getNodeIdList();
         if (nodeIds.containsKey(newNodeId)) {
-            IdentifierNotUnique ex = new IdentifierNotUnique("4844", node.getIdentifier().getValue() + " is not available for registration");
+            IdentifierNotUnique ex = new IdentifierNotUnique("4844", node.getIdentifier()
+                    .getValue() + " is not available for registration");
             throw ex;
         }
         if (nodeIds.containsValue(newBaseUrl)) {
@@ -250,7 +285,8 @@ public class NodeRegistryService {
                     break;
                 }
             }
-            throw new InvalidRequest("4823", "BaseURL " + newBaseUrl + " used by another node " + offendingNodeId);
+            throw new InvalidRequest("4823", "BaseURL " + newBaseUrl + " used by another node "
+                    + offendingNodeId);
         }
 
         try {
@@ -267,7 +303,7 @@ public class NodeRegistryService {
             throw ex;
         } catch (NotImplemented ex) {
             ex.setDetail_code("4820");
-            throw ex;    
+            throw ex;
         } catch (Exception ex) {
             ex.printStackTrace();
             log.error("Problem registering node " + node.getName(), ex);
@@ -275,6 +311,7 @@ public class NodeRegistryService {
         }
 
     }
+
     /*
      * Create a new node in the system. The node will be marked as unapproved until
      * an Administrator confirms the registration is authentic. The returned NodeReference
@@ -293,13 +330,14 @@ public class NodeRegistryService {
      * 
      */
 
-    public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
+    public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented,
+            ServiceFailure, InvalidRequest, NotFound {
         try {
-        if (node.isSynchronize()) {
-            validateSynchronizationSchedule(node);
-        }
-        nodeAccess.updateNode(node);
-        return true;
+            if (node.isSynchronize()) {
+                validateSynchronizationSchedule(node);
+            }
+            nodeAccess.updateNode(node);
+            return true;
         } catch (ServiceFailure ex) {
             ex.setDetail_code("4822");
             throw ex;
@@ -315,6 +353,7 @@ public class NodeRegistryService {
             throw new ServiceFailure("4842", ex.getMessage());
         }
     }
+
     /*
      * TODO: completed details of this function as a service representation
      *
@@ -334,31 +373,45 @@ public class NodeRegistryService {
             if ((services != null) && (services.size() > 0)) {
                 for (Service service : services) {
                     log.debug("deleteNode Service: " + service.getName());
-                    List<ServiceMethodRestriction> serviceRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(nodeReference.getValue(), nodeServicesAccess.buildNodeServiceId(service));
+                    List<ServiceMethodRestriction> serviceRestrictionList = serviceMethodRestrictionsAccess
+                            .getServiceMethodRestrictionList(nodeReference.getValue(),
+                                    nodeServicesAccess.buildNodeServiceId(service));
                     if (serviceRestrictionList != null) {
                         for (ServiceMethodRestriction restriction : serviceRestrictionList) {
-                            log.debug("deleteNode deleting " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(nodeReference, service, restriction));
-                            if (!serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(nodeReference, service, restriction)) {
+                            log.debug("deleteNode deleting "
+                                    + serviceMethodRestrictionsAccess
+                                            .buildServiceMethodRestrictionDN(nodeReference,
+                                                    service, restriction));
+                            if (!serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(
+                                    nodeReference, service, restriction)) {
 
-                                throw new ServiceFailure("0", "Unable to delete restriction " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(nodeReference, service, restriction));
+                                throw new ServiceFailure(
+                                        "0",
+                                        "Unable to delete restriction "
+                                                + serviceMethodRestrictionsAccess
+                                                        .buildServiceMethodRestrictionDN(
+                                                                nodeReference, service, restriction));
                             }
                         }
                     }
                     if (!nodeServicesAccess.deleteNodeService(nodeReference, service)) {
-                        throw new ServiceFailure("0", "Unable to delete service " + nodeServicesAccess.buildNodeServiceDN(nodeReference, service));
+                        throw new ServiceFailure("0", "Unable to delete service "
+                                + nodeServicesAccess.buildNodeServiceDN(nodeReference, service));
                     }
                 }
             }
             // delete the properties
-            List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeReference.getValue());
+            List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeReference
+                    .getValue());
             if (propertyList != null && propertyList.size() > 0) {
-            	for (Property property: propertyList) {
-            		nodePropertyAccess.deleteNodeProperty(nodeReference, property);
-            	}
+                for (Property property : propertyList) {
+                    nodePropertyAccess.deleteNodeProperty(nodeReference, property);
+                }
             }
             nodeAccess.deleteNode(nodeReference);
         }
     }
+
     /*
      * TODO: completed details of this function as a service representation
      *
@@ -375,6 +428,7 @@ public class NodeRegistryService {
         nodeAccess.setNodeApproved(nodeReference, Boolean.TRUE);
 
     }
+
     /*
      * There are certain rules that make for a valid schedule.
      * 
@@ -387,26 +441,29 @@ public class NodeRegistryService {
      */
     private void validateSynchronizationSchedule(Node node) throws InvalidRequest {
         if (node.getSynchronization() == null) {
-            throw new InvalidRequest("-1", "If the node has synchronization attribute set to true, then the node should include the Synchronization element");
+            throw new InvalidRequest(
+                    "-1",
+                    "If the node has synchronization attribute set to true, then the node should include the Synchronization element");
         }
-        
+
         String seconds = node.getSynchronization().getSchedule().getSec().replace(" ", "");
         String minutes = node.getSynchronization().getSchedule().getMin().replace(" ", "");
-        String hours =node.getSynchronization().getSchedule().getHour().replace(" ", "");
+        String hours = node.getSynchronization().getSchedule().getHour().replace(" ", "");
         String dayOfMonth = node.getSynchronization().getSchedule().getMday().replace(" ", "");
         String month = node.getSynchronization().getSchedule().getMon().replace(" ", "");
         String dayOfWeek = node.getSynchronization().getSchedule().getWday().replace(" ", "");
         String year = node.getSynchronization().getSchedule().getYear().replace(" ", "");
         try {
             Integer secondsInteger = Integer.parseInt(seconds);
-            if (secondsInteger == null || secondsInteger <0 || secondsInteger >= 60) {
+            if (secondsInteger == null || secondsInteger < 0 || secondsInteger >= 60) {
                 throw new InvalidRequest("-1", "seconds:" + seconds + " must be between 0 and 59");
             }
         } catch (NumberFormatException ex) {
-            throw new InvalidRequest("-1", "seconds:" + seconds + " must be an integer between 0 and 59");
+            throw new InvalidRequest("-1", "seconds:" + seconds
+                    + " must be an integer between 0 and 59");
         }
-        String crontabExpression = seconds + " " + minutes + " " + hours  + " " + 
-                dayOfMonth + " " + month + " " + dayOfWeek + " " + year;
+        String crontabExpression = seconds + " " + minutes + " " + hours + " " + dayOfMonth + " "
+                + month + " " + dayOfWeek + " " + year;
         if (!CronExpression.isValidExpression(crontabExpression)) {
             throw new InvalidRequest("-1", "Not a valid synchronization schedule");
         }
