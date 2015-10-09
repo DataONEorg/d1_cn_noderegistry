@@ -22,6 +22,8 @@
 
 package org.dataone.service.cn.impl.v1;
 
+import java.text.DateFormat;
+import java.util.Date;
 import org.dataone.cn.ldap.NodeAccess;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
@@ -125,29 +127,7 @@ public class NodeRegistryService {
 
         return node;
     }
-    /*
-     * Retreive a node that have been registered and approved
-     * within the DataONE infrastructure.
-     *
-     * @author waltz
-     * @param NodeReference The Node Identifier to be retreived
-     * @return a DataONE Node
-     * @throws ServiceFailure
-     * @throws NotFound
-     * 
-     */
 
-    public Node getApprovedNode(NodeReference nodeIdentifier) throws ServiceFailure, NotFound {
-
-    	Node node = null;
-    	try {
-        	node = TypeFactory.convertTypeFromType(impl.getApprovedNode(nodeIdentifier), Node.class);
-        } catch (Exception e) {
-			throw new ServiceFailure("0000", e.getMessage());        	
-        }
-
-        return node;
-    }
     /*
      * Create a new node in the system. The node will be marked as unapproved until
      * an Administrator confirms the registration is authentic. The returned NodeReference
