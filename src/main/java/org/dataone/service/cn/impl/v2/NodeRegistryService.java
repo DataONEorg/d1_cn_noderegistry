@@ -1,29 +1,27 @@
 /**
- * This work was created by participants in the DataONE project, and is
- * jointly copyrighted by participating institutions in DataONE. For 
- * more information on DataONE, see our web site at http://dataone.org.
+ * This work was created by participants in the DataONE project, and is jointly copyrighted by participating
+ * institutions in DataONE. For more information on DataONE, see our web site at http://dataone.org.
  *
- *   Copyright ${year}
+ * Copyright ${year}
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
- * limitations under the License.
- * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
  * $Id$
  */
-
 package org.dataone.service.cn.impl.v2;
 
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,26 +50,21 @@ import org.dataone.service.types.v2.NodeList;
 import org.dataone.service.types.v2.Property;
 
 /**
- * Though this is an implementation based on the CNRegister interface.
- * The methods do not conform to the CNRegister interface definitions (yet)
- * The CNRegister interface should be implemented and all business logic
- * maintained in this class. However, the current business logic requires
- * a dependency on the d1_identity_manager component. Since d1_identity_manager
- * already depends on this class and therefore this component, the business
- * logic is separated into the controller for the time being so as not to
- * create a circular dependency between components (XXX should merge d1_identity_manager
- * and d1_cn_noderegistry classes into the d1_cn_common component).
+ * Though this is an implementation based on the CNRegister interface. The methods do not conform to the CNRegister
+ * interface definitions (yet) The CNRegister interface should be implemented and all business logic maintained in this
+ * class. However, the current business logic requires a dependency on the d1_identity_manager component. Since
+ * d1_identity_manager already depends on this class and therefore this component, the business logic is separated into
+ * the controller for the time being so as not to create a circular dependency between components (XXX should merge
+ * d1_identity_manager and d1_cn_noderegistry classes into the d1_cn_common component).
  *
- * The package also extends beyond the definition of CNRegister
- * to include other public service methods, such as getNode and listNodes,
- * that relate to the NodeRegistry but are a part of other layers of the CN
+ * The package also extends beyond the definition of CNRegister to include other public service methods, such as getNode
+ * and listNodes, that relate to the NodeRegistry but are a part of other layers of the CN
  *
- * Lastly, deleteNode and acceptNode are not a part of any public definitions
- * as of yet, but are provided as an indication of future needs.
+ * Lastly, deleteNode and acceptNode are not a part of any public definitions as of yet, but are provided as an
+ * indication of future needs.
  *
- * This class is composed of Data Access Objects that serve to interact
- * directly with LDAP store
- * 
+ * This class is composed of Data Access Objects that serve to interact directly with LDAP store
+ *
  * @author waltz
  */
 public class NodeRegistryService {
@@ -85,7 +78,15 @@ public class NodeRegistryService {
             .compile("^https?\\:\\/\\/(?:(?:localhost(?:\\:8080)?\\/)|(?:127\\.0)).+");
     static Pattern validNodeIdPattern = Pattern.compile(Settings.getConfiguration().getString(
             "cn.nodeId.validation"));
+    private long lastNodelistRefreshTimeMS = 0;
 
+    static final long NODELIST_REFRESH_INTERVAL_MS = Settings.getConfiguration().getLong("noderegistry.nodeListRefreshInterval", 3L) * 1000L;
+    static final long NODE_REFRESH_INTERVAL_MS = Settings.getConfiguration().getLong("noderegistry.nodeRefreshInterval", 3L) * 1000L;
+    ;
+    NodeList nodeList = null;
+
+    Map<NodeReference, Long> nodeRefreshDateMap = new ConcurrentHashMap<NodeReference, Long>();
+    Map<NodeReference, Node> nodeCacheMap = new ConcurrentHashMap<NodeReference, Node>();
     /*
      * Retreive a list of nodes that have been registered and approved
      * with the DataONE infrastructure.
@@ -96,39 +97,42 @@ public class NodeRegistryService {
      * @throws NotImplemented
      * 
      */
+
     public NodeList listNodes() throws NotImplemented, ServiceFailure {
-        NodeList nodeList = new NodeList();
 
-        List<Node> allNodes = nodeAccess.getApprovedNodeList();
-        log.debug("found " + allNodes.size() + " nodes");
-        for (Node node : allNodes) {
+        if ((nodeList == null) || this.isTimeForNodelistRefresh()) {
+            nodeList = new NodeList();
+            List<Node> allNodes = nodeAccess.getApprovedNodeList();
+            log.debug("found " + allNodes.size() + " nodes");
+            for (Node node : allNodes) {
 
-            String nodeIdentifier = node.getIdentifier().getValue();
-            log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL());
-            List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier);
-            if (!serviceList.isEmpty()) {
-                for (Service service : serviceList) {
-                    String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
-                    ;
-                    log.trace("\t has service " + nodeServiceId);
-                    List<ServiceMethodRestriction> restrictionList = serviceMethodRestrictionsAccess
-                            .getServiceMethodRestrictionList(nodeIdentifier, nodeServiceId);
-                    for (ServiceMethodRestriction restrict : restrictionList) {
-                        log.trace("\t\t has restriction" + restrict.getMethodName());
+                String nodeIdentifier = node.getIdentifier().getValue();
+                log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL());
+                List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier);
+                if (!serviceList.isEmpty()) {
+                    for (Service service : serviceList) {
+                        String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
+                        ;
+                        log.trace("\t has service " + nodeServiceId);
+                        List<ServiceMethodRestriction> restrictionList = serviceMethodRestrictionsAccess
+                                .getServiceMethodRestrictionList(nodeIdentifier, nodeServiceId);
+                        for (ServiceMethodRestriction restrict : restrictionList) {
+                            log.trace("\t\t has restriction" + restrict.getMethodName());
+                        }
+                        service.setRestrictionList(restrictionList);
                     }
-                    service.setRestrictionList(restrictionList);
+                    Services services = new Services();
+                    services.setServiceList(serviceList);
+                    node.setServices(services);
                 }
-                Services services = new Services();
-                services.setServiceList(serviceList);
-                node.setServices(services);
+
+                // set the property list
+                List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier);
+                node.setPropertyList(propertyList);
+
             }
-
-            // set the property list
-            List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier);
-            node.setPropertyList(propertyList);
-
+            nodeList.setNodeList(allNodes);
         }
-        nodeList.setNodeList(allNodes);
         return nodeList;
     }
 
@@ -143,79 +147,41 @@ public class NodeRegistryService {
      * @throws NotFound
      * 
      */
-
     public Node getNode(NodeReference nodeReference) throws ServiceFailure, NotFound {
 
         Node node = null;
-        try {
-            node = nodeAccess.getNode(nodeReference);
-        } catch (NameNotFoundException ex) {
-            log.warn("Node not found: " + nodeReference.getValue());
-            throw new NotFound("4842", ex.getMessage());
-        } catch (NamingException ex) {
-            throw new ServiceFailure("4842", ex.getMessage());
-        }
-
-        log.debug(nodeReference.getValue() + " " + node.getName() + " " + node.getBaseURL() + " "
-                + node.getBaseURL());
-        List<Service> serviceList = nodeServicesAccess.getServiceList(nodeReference.getValue());
-        if (!serviceList.isEmpty()) {
-            for (Service service : serviceList) {
-                String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
-
-                service.setRestrictionList(serviceMethodRestrictionsAccess
-                        .getServiceMethodRestrictionList(node.getIdentifier().getValue(),
-                                nodeServiceId));
+        if (this.isTimeForNodeRefresh(nodeReference)) {
+            try {
+                node = nodeAccess.getNode(nodeReference);
+            } catch (NameNotFoundException ex) {
+                log.warn("Node not found: " + nodeReference.getValue());
+                throw new NotFound("4842", ex.getMessage());
+            } catch (NamingException ex) {
+                throw new ServiceFailure("4842", ex.getMessage());
             }
-            Services services = new Services();
-            services.setServiceList(serviceList);
-            node.setServices(services);
 
-        }
-        // set the property list
-        List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeReference.getValue());
-        node.setPropertyList(propertyList);
+            log.debug(nodeReference.getValue() + " " + node.getName() + " " + node.getBaseURL() + " "
+                    + node.getBaseURL());
+            List<Service> serviceList = nodeServicesAccess.getServiceList(nodeReference.getValue());
+            if (!serviceList.isEmpty()) {
+                for (Service service : serviceList) {
+                    String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
 
-        return node;
-    }
+                    service.setRestrictionList(serviceMethodRestrictionsAccess
+                            .getServiceMethodRestrictionList(node.getIdentifier().getValue(),
+                                    nodeServiceId));
+                }
+                Services services = new Services();
+                services.setServiceList(serviceList);
+                node.setServices(services);
 
-    /*
-     * Retreive a node that have been registered and approved
-     * within the DataONE infrastructure.
-     *
-     * @author waltz
-     * @param NodeReference The Node Identifier to be retreived
-     * @return a DataONE Node
-     * @throws ServiceFailure
-     * @throws NotFound
-     * 
-     */
-
-    public Node getApprovedNode(NodeReference nodeIdentifier) throws ServiceFailure, NotFound {
-
-        Node node = nodeAccess.getApprovedNode(nodeIdentifier);
-
-        log.debug(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL() + " "
-                + node.getBaseURL());
-        List<Service> serviceList = nodeServicesAccess.getServiceList(nodeIdentifier.getValue());
-        if (!serviceList.isEmpty()) {
-            for (Service service : serviceList) {
-                String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
-
-                service.setRestrictionList(serviceMethodRestrictionsAccess
-                        .getServiceMethodRestrictionList(node.getIdentifier().getValue(),
-                                nodeServiceId));
             }
-            Services services = new Services();
-            services.setServiceList(serviceList);
-            node.setServices(services);
+            // set the property list
+            List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeReference.getValue());
+            node.setPropertyList(propertyList);
+            nodeCacheMap.put(nodeReference, node);
         }
-
-        // set the property list
-        List<Property> propertyList = nodePropertyAccess.getPropertyList(nodeIdentifier.getValue());
-        node.setPropertyList(propertyList);
-
-        return node;
+        return nodeCacheMap.get(nodeReference);
     }
 
     /*
@@ -232,7 +198,6 @@ public class NodeRegistryService {
      * @throws IdentifierNotUnique
      * 
      */
-
     public NodeReference register(Node node) throws ServiceFailure, InvalidRequest,
             IdentifierNotUnique, NotImplemented {
         // do not allow localhost to be baseURL of a node
@@ -309,7 +274,6 @@ public class NodeRegistryService {
      * @throws NotFound
      * 
      */
-
     public boolean updateNodeCapabilities(NodeReference nodeid, Node node) throws NotImplemented,
             ServiceFailure, InvalidRequest, NotFound {
         try {
@@ -317,6 +281,11 @@ public class NodeRegistryService {
                 validateSynchronizationSchedule(node);
             }
             nodeAccess.updateNode(node);
+            this.setLastNodelistRefreshTimeMS(this.getLastNodelistRefreshTimeMS()-NODELIST_REFRESH_INTERVAL_MS);
+            if (nodeRefreshDateMap.containsKey(nodeid)) {
+                // force update on next refresh
+                nodeRefreshDateMap.put(nodeid, nodeRefreshDateMap.get(nodeid) - NODE_REFRESH_INTERVAL_MS);
+            }
             return true;
         } catch (ServiceFailure ex) {
             ex.setDetail_code("4822");
@@ -346,7 +315,6 @@ public class NodeRegistryService {
      * @throws ServiceFailure
      * 
      */
-
     public void deleteNode(NodeReference nodeReference) throws ServiceFailure {
         if (!nodeAccess.getNodeApproved(nodeReference)) {
             List<Service> services = nodeServicesAccess.getServiceList(nodeReference.getValue());
@@ -360,17 +328,17 @@ public class NodeRegistryService {
                         for (ServiceMethodRestriction restriction : serviceRestrictionList) {
                             log.debug("deleteNode deleting "
                                     + serviceMethodRestrictionsAccess
-                                            .buildServiceMethodRestrictionDN(nodeReference,
-                                                    service, restriction));
+                                    .buildServiceMethodRestrictionDN(nodeReference,
+                                            service, restriction));
                             if (!serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(
                                     nodeReference, service, restriction)) {
 
                                 throw new ServiceFailure(
                                         "0",
                                         "Unable to delete restriction "
-                                                + serviceMethodRestrictionsAccess
-                                                        .buildServiceMethodRestrictionDN(
-                                                                nodeReference, service, restriction));
+                                        + serviceMethodRestrictionsAccess
+                                        .buildServiceMethodRestrictionDN(
+                                                nodeReference, service, restriction));
                             }
                         }
                     }
@@ -403,7 +371,6 @@ public class NodeRegistryService {
      * @throws ServiceFailure
      * 
      */
-
     public void approveNode(NodeReference nodeReference) throws ServiceFailure {
         nodeAccess.setNodeApproved(nodeReference, Boolean.TRUE);
 
@@ -454,4 +421,56 @@ public class NodeRegistryService {
         return nodeAccess;
     }
 
+    /**
+     * determines if it is time to refresh the nodelist information cache.
+     *
+     * @return boolean. true if time to refresh
+     */
+    private synchronized Boolean isTimeForNodelistRefresh() {
+        Date now = new Date();
+        long nowMS = now.getTime();
+        DateFormat df = DateFormat.getDateTimeInstance();
+        df.format(now);
+
+        if (nowMS - this.getLastNodelistRefreshTimeMS() > NODELIST_REFRESH_INTERVAL_MS) {
+            this.setLastNodelistRefreshTimeMS(nowMS);
+            log.info("  nodelist refresh: new cached time: " + df.format(now));
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * determines if it is time to refresh the node information cache.
+     *
+     * @return boolean. true if time to refresh
+     */
+    private synchronized Boolean isTimeForNodeRefresh(NodeReference nodeReference) {
+        Date now = new Date();
+        Long nowMS = new Long(now.getTime());
+        DateFormat df = DateFormat.getDateTimeInstance();
+        df.format(now);
+        if (!nodeRefreshDateMap.containsKey(nodeReference)) {
+            nodeRefreshDateMap.put(nodeReference, nowMS);
+
+            log.info("node initial refresh: new cached time: " + df.format(now));
+            return true;
+        } else if (nowMS - nodeRefreshDateMap.get(nodeReference) > NODELIST_REFRESH_INTERVAL_MS) {
+            nodeRefreshDateMap.put(nodeReference, nowMS);
+
+            log.info("node refresh: new cached time: " + df.format(now));
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private synchronized long getLastNodelistRefreshTimeMS() {
+        return lastNodelistRefreshTimeMS;
+    }
+
+    private synchronized void setLastNodelistRefreshTimeMS(long lastNodelistRefreshTimeMS) {
+        this.lastNodelistRefreshTimeMS = lastNodelistRefreshTimeMS;
+    }
 }
