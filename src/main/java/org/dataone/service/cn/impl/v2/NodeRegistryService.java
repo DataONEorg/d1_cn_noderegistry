@@ -98,7 +98,7 @@ public class NodeRegistryService {
      * 
      */
 
-    public NodeList listNodes() throws NotImplemented, ServiceFailure {
+    public synchronized NodeList listNodes() throws NotImplemented, ServiceFailure {
 
         if ((nodeList == null) || this.isTimeForNodelistRefresh()) {
             nodeList = new NodeList();
@@ -147,10 +147,11 @@ public class NodeRegistryService {
      * @throws NotFound
      * 
      */
-    public Node getNode(NodeReference nodeReference) throws ServiceFailure, NotFound {
+    public synchronized Node getNode(NodeReference nodeReference) throws ServiceFailure, NotFound {
 
         Node node = null;
-        if (this.isTimeForNodeRefresh(nodeReference)) {
+        if ( (!nodeCacheMap.containsKey(nodeReference))
+                || this.isTimeForNodeRefresh(nodeReference)) {
             try {
                 node = nodeAccess.getNode(nodeReference);
             } catch (NameNotFoundException ex) {
@@ -181,7 +182,11 @@ public class NodeRegistryService {
             node.setPropertyList(propertyList);
             nodeCacheMap.put(nodeReference, node);
         }
-        return nodeCacheMap.get(nodeReference);
+        node = nodeCacheMap.get(nodeReference);
+        if (node == null) {
+            throw new ServiceFailure("4803", "could not retrieve " + nodeReference.getValue() + " from nodeCacheMap");
+        }
+        return node;
     }
 
     /*
@@ -426,7 +431,7 @@ public class NodeRegistryService {
      *
      * @return boolean. true if time to refresh
      */
-    private synchronized Boolean isTimeForNodelistRefresh() {
+    private Boolean isTimeForNodelistRefresh() {
         Date now = new Date();
         long nowMS = now.getTime();
         DateFormat df = DateFormat.getDateTimeInstance();
@@ -446,7 +451,7 @@ public class NodeRegistryService {
      *
      * @return boolean. true if time to refresh
      */
-    private synchronized Boolean isTimeForNodeRefresh(NodeReference nodeReference) {
+    private Boolean isTimeForNodeRefresh(NodeReference nodeReference) {
         Date now = new Date();
         Long nowMS = new Long(now.getTime());
         DateFormat df = DateFormat.getDateTimeInstance();
@@ -466,7 +471,7 @@ public class NodeRegistryService {
         }
     }
 
-    private synchronized long getLastNodelistRefreshTimeMS() {
+    private long getLastNodelistRefreshTimeMS() {
         return lastNodelistRefreshTimeMS;
     }
 
