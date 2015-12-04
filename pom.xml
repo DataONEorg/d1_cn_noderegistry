@@ -8,7 +8,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <hazelcast.version>2.4.1</hazelcast.version>
-        <d1_cn_common_version>2.0.0</d1_cn_common_version>
+        <d1_cn_common_version>2.0.1</d1_cn_common_version>
         <d1_test_resources_version>2.0.0</d1_test_resources_version>
         <apache.ds.version>2.0.0-M17</apache.ds.version>
         <apacheds-jdbm.version>2.0.0-M5</apacheds-jdbm.version>
