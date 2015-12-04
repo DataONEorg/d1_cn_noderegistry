@@ -699,9 +699,14 @@ public class NodeAccess extends LDAPService {
 			while (subjects.hasMore()) {
 				Subject nodeSubject = new Subject();
 				String subjectValue = (String) subjects.next();
-				X500Principal principal = new X500Principal(subjectValue);
-				String standardizedName = principal.getName(X500Principal.RFC2253);
-				nodeSubject.setValue(standardizedName);
+				nodeSubject.setValue(subjectValue);
+				try {
+					X500Principal principal = new X500Principal(subjectValue);
+					String standardizedName = principal.getName(X500Principal.RFC2253);
+					nodeSubject.setValue(standardizedName);
+				} catch (IllegalArgumentException iae) {
+					// ignore
+				}
 				node.addSubject(nodeSubject);
 			}
 		}
@@ -710,9 +715,14 @@ public class NodeAccess extends LDAPService {
 			while (contactSubjects.hasMore()) {
 				Subject nodeContactSubject = new Subject();
 				String contactSubjectValue = (String) contactSubjects.next();
-				X500Principal principal = new X500Principal(contactSubjectValue);
-				String standardizedName = principal.getName(X500Principal.RFC2253);
-				nodeContactSubject.setValue(standardizedName);
+				nodeContactSubject.setValue(contactSubjectValue);
+				try {
+					X500Principal principal = new X500Principal(contactSubjectValue);
+					String standardizedName = principal.getName(X500Principal.RFC2253);
+					nodeContactSubject.setValue(standardizedName);
+				} catch (IllegalArgumentException iae) {
+					// ignore
+				}
 				node.addContactSubject(nodeContactSubject);
 			}
 		}
