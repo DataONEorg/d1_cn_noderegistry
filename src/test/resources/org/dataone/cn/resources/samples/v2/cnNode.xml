@@ -25,11 +25,14 @@
                     <subject>cn=test,dc=dataone,dc=org</subject>
                     <subject>cn=test2,dc=dataone,dc=org</subject>
                     <subject>cn=test3,dc=dataone,dc=org</subject>
+                    <subject>http://orcid.org/0000-0003-1758-9950</subject>
             </restriction>
         </service>
     </services>
     <subject>cn=test,dc=dataone,dc=org</subject>
     <subject>cn=test2,dc=dataone,dc=org</subject>
+    <subject>http://orcid.org/0000-0003-1758-9950</subject>
     <contactSubject>cn=test,dc=dataone,dc=org</contactSubject>
     <contactSubject>cn=test2,dc=dataone,dc=org</contactSubject>
+    <contactSubject>http://orcid.org/0000-0003-1758-9950</contactSubject>
 </d1:node>
