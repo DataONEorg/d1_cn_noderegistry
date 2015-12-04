@@ -180,9 +180,15 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
             NamingEnumeration allowSubjects = attributesMap.get(SERVICE_ALLOWED_SUBJECT.toLowerCase());
             while (allowSubjects.hasMore()) {
                 Subject allowSubject = new Subject();
-                X500Principal principal = new X500Principal((String) allowSubjects.next());
-                String standardizedName = principal.getName(X500Principal.RFC2253);
-                allowSubject.setValue(standardizedName);
+                String subjectValue = (String) allowSubjects.next();
+                allowSubject.setValue(subjectValue);
+                try {
+	                X500Principal principal = new X500Principal(subjectValue);
+	                String standardizedName = principal.getName(X500Principal.RFC2253);
+	                allowSubject.setValue(standardizedName);
+                } catch (IllegalArgumentException iae) {
+                	//ignore
+                }
                 subjectList.add(allowSubject);
             }
         }
