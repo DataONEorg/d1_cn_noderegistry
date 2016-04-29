@@ -84,7 +84,6 @@ public class NodeAccess extends LDAPService {
 
 	/* non-datatype attributes */
 	public static final String NODE_APPROVED = "d1NodeApproved";
-	public static final String PROCESSING_STATE = "d1NodeProcessingState";
 	public static final String LOG_LAST_AGGREGATED = "d1NodeLogLastAggregated";
 	public static final String AGGREGATE_LOGS = "d1NodeAggregateLogs";
 	
@@ -120,7 +119,8 @@ public class NodeAccess extends LDAPService {
 	public static final String NODE_SYNCHRONIZE = "d1NodeSynchronize";
 	public static final String NODE_TYPE = "d1NodeType";
 	public static final String NODE_STATE = "d1NodeState";
-	
+	/* log aggregation elements */
+
     
     private static NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
     private static NodePropertyAccess nodePropertyAccess = new NodePropertyAccess();
@@ -131,54 +131,7 @@ public class NodeAccess extends LDAPService {
         this.setBase(Settings.getConfiguration().getString("nodeRegistry.ldap.base"));
     }
 
-    @Override
-    public void setBase(String base) {
-        this.base = base;
-    }
-
-    /**
-     * provide a nodeReference to return a string that
-     * should conform to distinguished name rules for
-     * a node entry in ldap
-     * XXX As an after thought, this should be returning a DN structure
-     * not a string!
-     *
-     * @param nodeReference
-     * @return String of DN
-     * 
-     */
-    public String buildNodeDN(NodeReference nodeReference) {
-        return "cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
-    }
-
-    /**
-     * provide a nodeReference and return a string that
-     * should conform to distinguished name rules for
-     * a node entry in ldap
-     *
-     * @param nodeDN Distinguished name of the DN, provided by buildNodeDN
-     * @return String
-     * @throws NamingException
-     * 
-     */
-    public HashMap<String, NamingEnumeration<?>> buildNodeAttributeMap(NodeReference nodeReference) throws NamingException {
-        HashMap<String, NamingEnumeration<?>> attributesMap = new HashMap<String, NamingEnumeration<?>>();
-        String nodeDN = buildNodeDN(nodeReference);
-        DirContext ctx = getContext();
-        Attributes attributes = ctx.getAttributes(nodeDN);
-        NamingEnumeration<? extends Attribute> values = attributes.getAll();
-        while (values.hasMore()) {
-
-            Attribute attribute = values.next();
-            String attributeName = attribute.getID().toLowerCase();
-            NamingEnumeration<?> attributeValue = attribute.getAll();
-            attributesMap.put(attributeName, attributeValue);
-
-        }
-
-        return attributesMap;
-
-    }
+ 
 
     /**
      * remove the node from LDAP, note all other dependent structures
@@ -189,57 +142,11 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Boolean deleteNode(NodeReference nodeReference) throws ServiceFailure {
+    protected Boolean deleteNode(DirContext ctx, NodeReference nodeReference) throws ServiceFailure {
 
 
-        return super.removeEntry(buildNodeDN(nodeReference));
+        return super.removeEntry(ctx, buildNodeDN(nodeReference));
 
-    }
-
-    /**
-     * retrieve list of approved NodeReference values from LDAP
-     * (is this method used anywhere?)
-     *
-     * @return List<String>
-     * @throws ServiceFailure
-     * 
-     */
-    public List<String> getApprovedNodeIdList() throws ServiceFailure {
-        List<String> allNodeIds = new ArrayList<String>();
-        try {
-            DirContext ctx = getContext();
-            SearchControls ctls = new SearchControls();
-            ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-
-            NamingEnumeration<SearchResult> results =
-                    ctx.search(base, "(&(objectClass=d1Node)(d1NodeApproved=TRUE))", ctls);
-
-            while (results != null && results.hasMore()) {
-                SearchResult si = results.next();
-                String nodeDn = si.getNameInNamespace();
-                log.trace("Search result found for: " + nodeDn);
-
-                //return dn;
-                // or we could double check
-                Attributes attributes = si.getAttributes();
-                NamingEnumeration<? extends Attribute> values = attributes.getAll();
-                while (values.hasMore()) {
-                    Attribute attribute = values.next();
-                    String attributeName = attribute.getID();
-                    if (attributeName.equalsIgnoreCase("d1NodeId")) {
-                        allNodeIds.add((String) attribute.get());
-                    }
-                }
-            }
-        } catch (CommunicationException ex) {
-            ex.printStackTrace();
-            throw new ServiceFailure("-1", "LDAP Service is unresponsive");
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Problem searching Approved Node Ids ", e);
-            throw new ServiceFailure("-1", e.getMessage());
-        }
-        return allNodeIds;
     }
 
     /**
@@ -249,15 +156,14 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public List<Node> getApprovedNodeList() throws ServiceFailure {
+    protected List<Node> getApprovedNodeList(DirContext ctx) throws ServiceFailure {
         List<Node> allNode = new ArrayList<Node>();
         try {
-            DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-            log.trace("BASE: " + base);
+            log.trace("BASE: " + getBase());
             NamingEnumeration<SearchResult> results =
-                    ctx.search(this.base, "(&(objectClass=d1Node)(d1NodeApproved=TRUE))", ctls);
+                    ctx.search(getBase(), "(&(objectClass=d1Node)(d1NodeApproved=TRUE))", ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -288,75 +194,7 @@ public class NodeAccess extends LDAPService {
         }
         return allNode;
     }
-
-    /*
-     * getCnLoggingStatus
-     * 
-     * get the status of logging aggregation on CNs.
-     * each cn will have a state of the dataone processing such Offline, Recovery, or Active
-     * each CN will also have a date associated with logging named LogLastAggregated.
-     * the date and the state equals a logging status
-     *
-     * There is not a dataone type that currently maps or defines these values
-     * They are not part of the public API or services or types
-     * They are purely intended for log aggregation maintenance
-     * dataone processing state is different from the state of the CN. the CN may be up
-     * even though processing is Offline (if processing state is offline, synchronization
-     * and replication may also be offline, so it is be more of a processing attribute in general)
-     *
-     *
-     * @return Map<NodeReference, Map<String, String>>
-     * @throws ServiceFailure
-     * 
-     */
-    public Map<NodeReference, Map<String, String>> getCnLoggingStatus() throws ServiceFailure {
-        Map<NodeReference, Map<String, String>> nodeLogStatus = new HashMap<NodeReference, Map<String, String>>();
-        try {
-            DirContext ctx = getContext();
-            SearchControls ctls = new SearchControls();
-            ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
-
-            NamingEnumeration<SearchResult> results =
-                    ctx.search(base, "(&(objectClass=d1Node)(d1NodeType=cn))", ctls);
-
-            while (results != null && results.hasMore()) {
-                NodeReference nodeReference = new NodeReference();
-                Map<String, String> nodeProperties = new HashMap<String, String>();
-                SearchResult si = results.next();
-                String nodeDn = si.getNameInNamespace();
-                log.trace("Search result found for: " + nodeDn);
-
-                //return dn;
-                // or we could double check
-                Attributes attributes = si.getAttributes();
-                NamingEnumeration<? extends Attribute> values = attributes.getAll();
-                while (values.hasMore()) {
-                    Attribute attribute = values.next();
-                    String attributeName = attribute.getID();
-                    if (attributeName.equalsIgnoreCase("d1NodeId")) {
-                        nodeReference.setValue((String) attribute.get());
-                    }
-                    if (attributeName.equalsIgnoreCase(PROCESSING_STATE)) {
-                        nodeProperties.put(PROCESSING_STATE, (String) attribute.get());
-                    }
-                    if (attributeName.equalsIgnoreCase(LOG_LAST_AGGREGATED)) {
-                        nodeProperties.put(LOG_LAST_AGGREGATED, (String) attribute.get());
-                    }
-                }
-                nodeLogStatus.put(nodeReference, nodeProperties);
-            }
-        } catch (CommunicationException ex) {
-            ex.printStackTrace();
-            throw new ServiceFailure("-1", "LDAP Service is unresponsive");
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Problem search Nodes for LoggingStatus", e);
-            throw new ServiceFailure("-1", e.getMessage());
-        }
-        return nodeLogStatus;
-
-    }
-
+    
     /**
      * return the date the last time a node was harvested for log records
      * the date is not the time the harvesting ran, but
@@ -367,17 +205,42 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Date getLogLastAggregated(NodeReference nodeReference) throws ServiceFailure {
+    protected Date getDateLastHarvested(DirContext ctx, NodeReference nodeReference) throws ServiceFailure {
         Date logLastAggregated = null;
         try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
-            if (attributesMap.containsKey("d1nodeloglastaggregated")) {
-                logLastAggregated = DateTimeMarshaller.deserializeDateToUTC(getEnumerationValueString(attributesMap.get("d1nodeloglastaggregated")));
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(ctx, nodeReference);
+            if (attributesMap.containsKey(NODE_LAST_HARVESTED.toLowerCase())) {
+                logLastAggregated = DateTimeMarshaller.deserializeDateToUTC(getEnumerationValueString(attributesMap.get(NODE_LAST_HARVESTED.toLowerCase())));
             }
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("Problem retrieving d1nodeloglastaggregated of " + nodeReference.getValue(), e);
-            throw new ServiceFailure("4801", "Could retrieve d1nodeloglastaggregated from: " + nodeReference.getValue() + " " + e.getMessage());
+            log.error("Problem retrieving " + NODE_LAST_HARVESTED.toLowerCase() + " of " + nodeReference.getValue(), e);
+            throw new ServiceFailure("4801", "Could retrieve " + NODE_LAST_HARVESTED.toLowerCase() + " from: " + nodeReference.getValue() + " " + e.getMessage());
+        }
+        return logLastAggregated;
+    }
+    
+    /**
+     * return the date the last time a node was harvested for log records
+     * the date is not the time the harvesting ran, but
+     * the latest dateLogged from the LogEvent records harvested
+     *
+     * @param nodeReference
+     * @return Date
+     * @throws ServiceFailure
+     * 
+     */
+    protected Date getLogLastAggregated(DirContext ctx, NodeReference nodeReference) throws ServiceFailure {
+        Date logLastAggregated = null;
+        try {
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(ctx, nodeReference);
+            if (attributesMap.containsKey(LOG_LAST_AGGREGATED.toLowerCase())) {
+                logLastAggregated = DateTimeMarshaller.deserializeDateToUTC(getEnumerationValueString(attributesMap.get(LOG_LAST_AGGREGATED.toLowerCase())));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Problem retrieving " + LOG_LAST_AGGREGATED.toLowerCase() + " of " + nodeReference.getValue(), e);
+            throw new ServiceFailure("4801", "Could retrieve " + LOG_LAST_AGGREGATED.toLowerCase() + " from: " + nodeReference.getValue() + " " + e.getMessage());
         }
         return logLastAggregated;
     }
@@ -392,9 +255,9 @@ public class NodeAccess extends LDAPService {
      * @throws NameNotFoundException
      * 
      */
-    public Node getNode(NodeReference nodeReference) throws NotFound, NamingException, NameNotFoundException {
+    protected Node getNode(DirContext dirContext, NodeReference nodeReference) throws NotFound, NamingException, NameNotFoundException {
 
-        HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
+        HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(dirContext, nodeReference);
         log.debug("Retrieved Node for: " + nodeReference.getValue());
 
         if (attributesMap.isEmpty()) {
@@ -414,11 +277,11 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Node getApprovedNode(NodeReference nodeReference) throws ServiceFailure, NotFound {
+    protected Node getApprovedNode(DirContext ctx, NodeReference nodeReference) throws ServiceFailure, NotFound {
         Boolean nodeApproved = false;
         HashMap<String, NamingEnumeration<?>> attributesMap;
         try {
-            attributesMap = buildNodeAttributeMap(nodeReference);
+            attributesMap = buildNodeAttributeMap(ctx, nodeReference);
         } catch (NameNotFoundException e) {
             throw new NotFound("4801", nodeReference.getValue() + " not found on the server");
         } catch (Exception e) {
@@ -463,10 +326,10 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Boolean getNodeApproved(NodeReference nodeReference) throws ServiceFailure {
+    protected Boolean getNodeApproved(DirContext ctx, NodeReference nodeReference) throws ServiceFailure {
         Boolean nodeApproved = false;
         try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(ctx, nodeReference);
             if (attributesMap.containsKey(NODE_APPROVED.toLowerCase())) {
                 String nodeApprovedStr = getEnumerationValueString(attributesMap.get(NODE_APPROVED.toLowerCase()));
                 
@@ -490,15 +353,14 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Map<String, String> getNodeIdList() throws ServiceFailure {
+    protected Map<String, String> getNodeIdList(DirContext ctx) throws ServiceFailure {
         Map<String, String> allNodeIds = new HashMap<String, String>();
         try {
-            DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
             NamingEnumeration<SearchResult> results =
-                    ctx.search(base, "(objectClass=d1Node)", ctls);
+                    ctx.search(getBase(), "(objectClass=d1Node)", ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -514,10 +376,10 @@ public class NodeAccess extends LDAPService {
                 while (values.hasMore()) {
                     Attribute attribute = values.next();
                     String attributeName = attribute.getID();
-                    if (attributeName.equalsIgnoreCase("d1NodeId")) {
+                    if (attributeName.equalsIgnoreCase(NODE_ID)) {
                         nodeId = (String) attribute.get();
                     }
-                    if (attributeName.equalsIgnoreCase("d1NodeBaseURL")) {
+                    if (attributeName.equalsIgnoreCase(NODE_BASEURL)) {
                         nodeBaseUrl = (String) attribute.get();
                     }
                 }
@@ -542,15 +404,14 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public List<NodeReference> getPendingNodeReferenceList() throws ServiceFailure {
+    protected List<NodeReference> getPendingNodeReferenceList(DirContext ctx) throws ServiceFailure {
         List<NodeReference> allNodeIds = new ArrayList<NodeReference>();
         try {
-            DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
             NamingEnumeration<SearchResult> results =
-                    ctx.search(base, "(&(objectClass=d1Node)(d1NodeApproved=FALSE))", ctls);
+                    ctx.search(getBase(), "(&(objectClass=d1Node)(d1NodeApproved=FALSE))", ctls);
 
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
@@ -564,7 +425,7 @@ public class NodeAccess extends LDAPService {
                 while (values.hasMore()) {
                     Attribute attribute = values.next();
                     String attributeName = attribute.getID();
-                    if (attributeName.equalsIgnoreCase("d1NodeId")) {
+                    if (attributeName.equalsIgnoreCase(NODE_ID)) {
                         NodeReference nodeId = new NodeReference();
                         nodeId.setValue((String) attribute.get());
                         allNodeIds.add(nodeId);
@@ -582,29 +443,6 @@ public class NodeAccess extends LDAPService {
         return allNodeIds;
     }
 
-    /**
-     * each CN will have a state associated with DataONE processing
-     * ProcessingState values are Offline, Recovery, or Active
-     *
-     * @param nodeIdentifier
-     * @return ProcessingState
-     * @throws ServiceFailure
-     * 
-     */
-    public ProcessingState getProcessingState(NodeReference nodeReference) throws ServiceFailure {
-        ProcessingState processingState = null;
-        try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
-            if (attributesMap.containsKey(PROCESSING_STATE.toLowerCase())) {
-                processingState = ProcessingState.convert(getEnumerationValueString(attributesMap.get(PROCESSING_STATE.toLowerCase())));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Problem determining processing state " + nodeReference.getValue(), e);
-            throw new ServiceFailure("4801", "Could not determine state of : " + nodeReference.getValue() + " " + e.getMessage());
-        }
-        return processingState;
-    }
 
     /**
      * each MN Node will have a boolean associated with DataONE logAggregation
@@ -623,7 +461,7 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public Boolean getAggregateLogs(NodeReference nodeReference) throws ServiceFailure {
+    protected Boolean getAggregateLogs(DirContext ctx, NodeReference nodeReference) throws ServiceFailure {
         // since this attribute will not be prepopulated, return true as the default
         // it will be populated once it is set to false before the initial run
         // of course this leaves a race condition if the first run of a node
@@ -632,7 +470,7 @@ public class NodeAccess extends LDAPService {
         // will be dealt with in the logAgg code and not here
         Boolean aggregateLogs = Boolean.valueOf(true);
         try {
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeReference);
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(ctx, nodeReference);
             if (attributesMap.containsKey(AGGREGATE_LOGS.toLowerCase())) {
 
                  aggregateLogs =   Boolean.valueOf(getEnumerationValueString(attributesMap.get(AGGREGATE_LOGS.toLowerCase())));
@@ -643,7 +481,6 @@ public class NodeAccess extends LDAPService {
                 String dnNodeIdentifier = buildNodeDN(nodeReference);
                 Attribute d1NodeAggregateLogs = new BasicAttribute(AGGREGATE_LOGS, Boolean.toString(aggregateLogs).toUpperCase());
                 // get a handle to an Initial DirContext
-                DirContext ctx = getContext();
 
                 // construct the list of modifications to make
                 ModificationItem[] mods = new ModificationItem[1];
@@ -660,7 +497,48 @@ public class NodeAccess extends LDAPService {
         }
         return aggregateLogs;
     }
+   /**
+     * provide a nodeReference to return a string that
+     * should conform to distinguished name rules for
+     * a node entry in ldap
+     * XXX As an after thought, this should be returning a DN structure
+     * not a string!
+     *
+     * @param nodeReference
+     * @return String of DN
+     * 
+     */
+    private String buildNodeDN(NodeReference nodeReference) {
+        return "cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
+    }
 
+    /**
+     * provide a nodeReference and return a string that
+     * should conform to distinguished name rules for
+     * a node entry in ldap
+     *
+     * @param nodeDN Distinguished name of the DN, provided by buildNodeDN
+     * @return String
+     * @throws NamingException
+     * 
+     */
+    private HashMap<String, NamingEnumeration<?>> buildNodeAttributeMap(DirContext ctx, NodeReference nodeReference) throws NamingException {
+        HashMap<String, NamingEnumeration<?>> attributesMap = new HashMap<String, NamingEnumeration<?>>();
+        String nodeDN = buildNodeDN(nodeReference);
+        Attributes attributes = ctx.getAttributes(nodeDN);
+        NamingEnumeration<? extends Attribute> values = attributes.getAll();
+        while (values.hasMore()) {
+
+            Attribute attribute = values.next();
+            String attributeName = attribute.getID().toLowerCase();
+            NamingEnumeration<?> attributeValue = attribute.getAll();
+            attributesMap.put(attributeName, attributeValue);
+
+        }
+
+        return attributesMap;
+
+    }
     
 	/**
 	 * from the provided attributeMap returned from an LDAP query, build out
@@ -922,7 +800,7 @@ public class NodeAccess extends LDAPService {
      * @throws NamingException
      * 
      */
-    public List<ModificationItem> mapNodeModificationItemList(HashMap<String, NamingEnumeration<?>> attributesMap, Node node) 
+    private List<ModificationItem> mapNodeModificationItemList(HashMap<String, NamingEnumeration<?>> attributesMap, Node node) 
     throws NamingException {
         List<ModificationItem> modificationItemList = new ArrayList<ModificationItem>();
 
@@ -1023,12 +901,11 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public void setDateLastHarvested(NodeReference nodeIdentifier, Date lastDateNodeHarvested) throws ServiceFailure {
+    protected void setDateLastHarvested(DirContext ctx, NodeReference nodeIdentifier, Date lastDateNodeHarvested) throws ServiceFailure {
         try {
             String dnNodeIdentifier = "cn=" + nodeIdentifier.getValue() + ",dc=dataone,dc=org";
-            Attribute d1NodeLastHarvested = new BasicAttribute("d1NodeLastHarvested", DateTimeMarshaller.serializeDateToUTC(lastDateNodeHarvested));
+            Attribute d1NodeLastHarvested = new BasicAttribute(NODE_LAST_HARVESTED, DateTimeMarshaller.serializeDateToUTC(lastDateNodeHarvested));
             // get a handle to an Initial DirContext
-            DirContext ctx = getContext();
 
             // construct the list of modifications to make
             ModificationItem[] mods = new ModificationItem[1];
@@ -1058,17 +935,16 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public void setLogLastAggregated(NodeReference nodeIdentifier, Date logAggregationDate) throws ServiceFailure {
+    protected void setLogLastAggregated(DirContext ctx, NodeReference nodeIdentifier, Date logAggregationDate) throws ServiceFailure {
         try {
             String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
             String strLogLastAggregated = DateTimeMarshaller.serializeDateToUTC(logAggregationDate);
             Attribute d1NodeLogLastAggregated = new BasicAttribute(LOG_LAST_AGGREGATED, strLogLastAggregated);
             // get a handle to an Initial DirContext
-            DirContext ctx = getContext();
 
             // construct the list of modifications to make
             ModificationItem[] mods = new ModificationItem[1];
-            if (getLogLastAggregated(nodeIdentifier) == null) {
+            if (getLogLastAggregated(ctx, nodeIdentifier) == null) {
                 mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, d1NodeLogLastAggregated);
             } else {
                 mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, d1NodeLogLastAggregated);
@@ -1095,12 +971,11 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public void setNodeApproved(NodeReference nodeIdentifier, Boolean approved) throws ServiceFailure {
+    protected void setNodeApproved(DirContext ctx, NodeReference nodeIdentifier, Boolean approved) throws ServiceFailure {
         try {
             String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
             Attribute d1NodeApproval = new BasicAttribute(NODE_APPROVED, Boolean.toString(approved).toUpperCase());
             // get a handle to an Initial DirContext
-            DirContext ctx = getContext();
 
             // construct the list of modifications to make
             ModificationItem[] mods = new ModificationItem[1];
@@ -1131,18 +1006,17 @@ public class NodeAccess extends LDAPService {
      * @throws NotFound
      * 
      */
-    public void createNode(Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
+    protected void createNode(DirContext ctx, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
         String dnNodeIdentifier = buildNodeDN(node.getIdentifier());
 
         try {
-            DirContext ctx = getContext();
             Attributes nodeAttributes = mapNodeAttributes(node);
             ctx.createSubcontext(dnNodeIdentifier, nodeAttributes);
             log.debug("Added Node entry " + dnNodeIdentifier);
             if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
                 for (Service service : node.getServices().getServiceList()) {
                     String serviceDN = nodeServicesAccess.buildNodeServiceDN(node.getIdentifier(), service);
-                    Attributes serviceAttributes = nodeServicesAccess.mapNodeServiceAttributes(node, service);
+                    Attributes serviceAttributes = nodeServicesAccess.mapNodeServiceAttributes( node, service);
                     ctx.createSubcontext(serviceDN, serviceAttributes);
                     log.debug("Added Node Service entry " + serviceDN);
                     if ((service.getRestrictionList() != null) && (service.getRestrictionList().size() > 0)) {
@@ -1181,14 +1055,14 @@ public class NodeAccess extends LDAPService {
      * @throws NotFound
      * 
      */
-    public void updateNode(Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
+    protected void updateNode(DirContext ctx, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
 
         try {
             log.debug("(a) updateNode being called");
 
-            DirContext ctx = getContext();
+
             NodeReference nodeid = node.getIdentifier();
-            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(nodeid);
+            HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(ctx, nodeid);
             List<ModificationItem> modificationItemList = mapNodeModificationItemList(attributesMap, node);
             for (ModificationItem item: modificationItemList) {
             	String id = item.getAttribute().getID();
@@ -1202,17 +1076,17 @@ public class NodeAccess extends LDAPService {
             log.debug("(b) modified using attributesMap");
 
             // easiest to remove existingServices and then adding the new ones back
-            List<Service> existingNodeServices = nodeServicesAccess.getServiceList(nodeid.getValue());
+            List<Service> existingNodeServices = nodeServicesAccess.getServiceList(ctx, nodeid.getValue());
             if ((existingNodeServices != null) && !(existingNodeServices.isEmpty())) {
                 for (Service removeService : existingNodeServices) {
                     String d1NodeServiceId = nodeServicesAccess.buildNodeServiceId(removeService);
-                    List<ServiceMethodRestriction> serviceMethodRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(nodeid.getValue(), d1NodeServiceId);
+                    List<ServiceMethodRestriction> serviceMethodRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(ctx, nodeid.getValue(), d1NodeServiceId);
                     if ((serviceMethodRestrictionList != null) && !(serviceMethodRestrictionList.isEmpty())) {
                         for (ServiceMethodRestriction removeServiceMethodRestriction : serviceMethodRestrictionList) {
-                            serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(nodeid, removeService, removeServiceMethodRestriction);
+                            serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(ctx, nodeid, removeService, removeServiceMethodRestriction);
                         }
                     }
-                    nodeServicesAccess.deleteNodeService(nodeid, removeService);
+                    nodeServicesAccess.deleteNodeService(ctx, nodeid, removeService);
                 }
             }
             log.debug("(c) removed services");
@@ -1237,10 +1111,10 @@ public class NodeAccess extends LDAPService {
             log.debug("(d) re-added services");
 
             // handle properties
-            List<Property> existingNodeProperties = nodePropertyAccess.getPropertyList(nodeid.getValue());
+            List<Property> existingNodeProperties = nodePropertyAccess.getPropertyList(ctx, nodeid.getValue());
             if ((existingNodeProperties != null) && !(existingNodeProperties.isEmpty())) {
                 for (Property removeProperty : existingNodeProperties) {                    
-                    nodePropertyAccess.deleteNodeProperty(nodeid, removeProperty);
+                    nodePropertyAccess.deleteNodeProperty(ctx, nodeid, removeProperty);
                 }
             }
             log.debug("(e) removed properties");
@@ -1266,44 +1140,6 @@ public class NodeAccess extends LDAPService {
         
     }
 
-    /**
-     * update the state a DataONE Node's processing daemon
-     * ProcessingState values are Offline, Recovery, or Active
-     * 
-     * needed by log aggregation to keep track of which nodes are available for recovery
-     *
-     * @param nodeIdentifier
-     * @param processingState
-     * @throws ServiceFailure
-     * 
-     */
-    public void setProcessingState(NodeReference nodeIdentifier, ProcessingState processingState) throws ServiceFailure {
-        try {
-            String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
-
-            // get a handle to an Initial DirContext
-            DirContext ctx = getContext();
-            Attribute d1ProcessingStateAttribute = new BasicAttribute(PROCESSING_STATE, processingState.getValue());
-            // construct the list of modifications to make
-            ModificationItem[] mods = new ModificationItem[1];
-            if (getProcessingState(nodeIdentifier) == null) {
-                mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, d1ProcessingStateAttribute);
-            } else {
-                mods[0] = new ModificationItem(DirContext.REPLACE_ATTRIBUTE, d1ProcessingStateAttribute);
-            }
-            // make the change
-            ctx.modifyAttributes(dnNodeIdentifier, mods);
-            log.debug("set " + PROCESSING_STATE + ": " + dnNodeIdentifier + " to " + processingState.getValue());
-        } catch (CommunicationException ex) {
-            ex.printStackTrace();
-            log.error("LDAP Service is unresponsive " + nodeIdentifier);
-            throw new ServiceFailure("-1", "LDAP Service is unresponsive");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error("Problem setting ProcessingState " + nodeIdentifier, ex);
-            throw new ServiceFailure("4801", "Could not set Processing state: " + nodeIdentifier + " " + ex.getMessage());
-        }
-    }
     
     /**
      * update the aggregate Logs Boolean on a DataONE Node
@@ -1314,12 +1150,11 @@ public class NodeAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public void setAggregateLogs(NodeReference nodeIdentifier, Boolean aggregateLogs) throws ServiceFailure {
+    protected void setAggregateLogs(DirContext ctx, NodeReference nodeIdentifier, Boolean aggregateLogs) throws ServiceFailure {
         try {
             String dnNodeIdentifier = buildNodeDN(nodeIdentifier);
             Attribute d1NodeAggregateLogs = new BasicAttribute(AGGREGATE_LOGS, Boolean.toString(aggregateLogs).toUpperCase());
             // get a handle to an Initial DirContext
-            DirContext ctx = getContext();
 
             // construct the list of modifications to make
             ModificationItem[] mods = new ModificationItem[1];
@@ -1381,7 +1216,7 @@ public class NodeAccess extends LDAPService {
      * @throws NamingException
      */
     @SuppressWarnings("rawtypes")
-	protected List<ModificationItem> calcListModifications(String attributeName, 
+    protected List<ModificationItem> calcListModifications(String attributeName, 
 			HashMap<String, NamingEnumeration<?>> attributesMap, Collection<String> newValues)
     throws NamingException
     {
@@ -1450,7 +1285,7 @@ public class NodeAccess extends LDAPService {
      * @return
      * @throws NamingException
      */
-	protected List<ModificationItem> calcSubjectListModifications(String attributeName, 
+    protected List<ModificationItem> calcSubjectListModifications(String attributeName, 
 			HashMap<String, NamingEnumeration<?>> attributesMap, List<Subject> newValues)
     throws NamingException
     {

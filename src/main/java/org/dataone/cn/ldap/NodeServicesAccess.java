@@ -65,10 +65,7 @@ public class NodeServicesAccess extends LDAPService {
         this.setBase(Settings.getConfiguration().getString("nodeRegistry.ldap.base"));
     }
 
-    @Override
-    public void setBase(String base) {
-        this.base = base;
-    }
+
 
     /**
      * provide a nodeReference and Service to return a string that
@@ -82,7 +79,7 @@ public class NodeServicesAccess extends LDAPService {
      * @return String of DN
      * 
      */
-    public String buildNodeServiceDN(NodeReference nodeReference, Service service) {
+    protected String buildNodeServiceDN(NodeReference nodeReference, Service service) {
         String d1NodeServiceId = buildNodeServiceId(service);
         String serviceDN =  NODE_SERVICE_ID + "=" + d1NodeServiceId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
         return serviceDN;
@@ -98,7 +95,7 @@ public class NodeServicesAccess extends LDAPService {
      * @return String
      *
      */
-    public String buildNodeServiceId(Service service) {
+    protected String buildNodeServiceId(Service service) {
         return service.getName() + "-" + service.getVersion();
     }
 
@@ -111,9 +108,9 @@ public class NodeServicesAccess extends LDAPService {
      * @return Boolean
      * 
      */
-    public Boolean deleteNodeService(NodeReference nodeReference, Service service) {
+    protected Boolean deleteNodeService(DirContext ctx, NodeReference nodeReference, Service service) {
 
-        return super.removeEntry(buildNodeServiceDN(nodeReference, service));
+        return super.removeEntry(ctx, buildNodeServiceDN(nodeReference, service));
     }
 
     /**
@@ -124,15 +121,15 @@ public class NodeServicesAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public List<Service> getServiceList(String nodeIdentifier) throws ServiceFailure {
+    protected List<Service> getServiceList(DirContext ctx, String nodeIdentifier) throws ServiceFailure {
         List<Service> allServices = new ArrayList<Service>();
         try {
-            DirContext ctx = getContext();
+
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             
             NamingEnumeration<SearchResult> results =
-                    ctx.search(this.base, String.format("(&(objectClass=%s)(%s=%s))",
+                    ctx.search(getBase(), String.format("(&(objectClass=%s)(%s=%s))",
                     OBJECT_CLASS_ID, NodeAccess.NODE_ID, nodeIdentifier), ctls);
                     
             while (results != null && results.hasMore()) {
@@ -175,7 +172,7 @@ public class NodeServicesAccess extends LDAPService {
      * @return Attributes
      * 
      */
-    public Attributes mapNodeServiceAttributes(Node node, Service service) {
+    protected Attributes mapNodeServiceAttributes(Node node, Service service) {
         Attributes serviceAttributes = new BasicAttributes(true /* ignore attributeID case */);
         String nodeServiceId = buildNodeServiceId(service);
         serviceAttributes.put(new BasicAttribute("objectclass", OBJECT_CLASS_ID));
@@ -197,7 +194,7 @@ public class NodeServicesAccess extends LDAPService {
      * @return Service
      * 
      */
-    public Service mapService(HashMap<String, String> attributesMap) {
+    private Service mapService(HashMap<String, String> attributesMap) {
         Service service = new Service();
         service.setName(attributesMap.get(NODE_SERVICE_NAME.toLowerCase()));
         service.setVersion(attributesMap.get(NODE_SERVICE_VERSION.toLowerCase()));

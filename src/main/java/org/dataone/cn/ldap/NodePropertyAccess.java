@@ -67,10 +67,6 @@ public class NodePropertyAccess extends LDAPService {
         this.setBase(Settings.getConfiguration().getString("nodeRegistry.ldap.base"));
     }
 
-    @Override
-    public void setBase(String base) {
-        this.base = base;
-    }
 
     /**
      * provide a nodeReference and Property to return a string that
@@ -84,7 +80,7 @@ public class NodePropertyAccess extends LDAPService {
      * @return String of DN
      * 
      */
-    public String buildNodePropertyDN(NodeReference nodeReference, Property property) {
+    protected String buildNodePropertyDN(NodeReference nodeReference, Property property) {
         String d1NodePropertyId = buildNodePropertyId(property);
         String propertyDN =  NODE_PROPERTY_ID + "=" + d1NodePropertyId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
         return propertyDN;
@@ -100,7 +96,7 @@ public class NodePropertyAccess extends LDAPService {
      * @return String
      *
      */
-    public String buildNodePropertyId(Property property) {
+    protected String buildNodePropertyId(Property property) {
         return property.getKey();
         //return property.getKey() + "-" + property.getValue();
     }
@@ -114,9 +110,9 @@ public class NodePropertyAccess extends LDAPService {
      * @return Boolean
      * 
      */
-    public Boolean deleteNodeProperty(NodeReference nodeReference, Property property) {
+    protected Boolean deleteNodeProperty(DirContext ctx, NodeReference nodeReference, Property property) {
 
-        return super.removeEntry(buildNodePropertyDN(nodeReference, property));
+        return super.removeEntry(ctx, buildNodePropertyDN(nodeReference, property));
     }
 
     /**
@@ -127,15 +123,14 @@ public class NodePropertyAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public List<Property> getPropertyList(String nodeIdentifier) throws ServiceFailure {
+    protected List<Property> getPropertyList(DirContext ctx, String nodeIdentifier) throws ServiceFailure {
         List<Property> allProperties = new ArrayList<Property>();
         try {
-            DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             
             NamingEnumeration<SearchResult> results =
-                    ctx.search(this.base, String.format("(&(objectClass=%s)(%s=%s))",
+                    ctx.search(getBase(), String.format("(&(objectClass=%s)(%s=%s))",
                     OBJECT_CLASS_ID, NodeAccess.NODE_ID, nodeIdentifier), ctls);
                     
             while (results != null && results.hasMore()) {
@@ -178,7 +173,7 @@ public class NodePropertyAccess extends LDAPService {
      * @return Attributes
      * 
      */
-    public Attributes mapNodePropertyAttributes(Node node, Property property) {
+    protected Attributes mapNodePropertyAttributes(Node node, Property property) {
         Attributes propertyAttributes = new BasicAttributes(true /* ignore attributeID case */);
         String NodePropertyId = buildNodePropertyId(property);
         propertyAttributes.put(new BasicAttribute("objectclass", OBJECT_CLASS_ID));
@@ -202,7 +197,7 @@ public class NodePropertyAccess extends LDAPService {
      * @return Property
      * 
      */
-    public Property mapProperty(HashMap<String, String> attributesMap) {
+    private Property mapProperty(HashMap<String, String> attributesMap) {
         Property property = new Property();
         property.setKey(attributesMap.get(NODE_PROPERTY_KEY.toLowerCase()));
         property.setValue(attributesMap.get(NODE_PROPERTY_VALUE.toLowerCase()));

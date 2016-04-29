@@ -33,16 +33,14 @@ import java.util.Date;
 import java.util.List;
 
 import javax.naming.NamingException;
-import javax.naming.ldap.LdapContext;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
-import org.apache.directory.server.integ.ServerIntegrationUtils;
-import org.dataone.cn.ldap.NodeAccess;
+import org.dataone.cn.ldap.NodeFacade;
 import org.dataone.cn.ldap.NodeServicesAccess;
 import org.dataone.cn.ldap.ServiceMethodRestrictionsAccess;
-import org.dataone.service.cn.impl.v1.NodeRegistryService;
+import org.dataone.service.cn.v1.impl.NodeRegistryServiceImpl;
 import org.dataone.service.exceptions.IdentifierNotUnique;
 import org.dataone.service.exceptions.InvalidRequest;
 import org.dataone.service.exceptions.NotImplemented;
@@ -58,18 +56,16 @@ import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
 import org.dataone.service.types.v1.Synchronization;
 import org.dataone.service.util.TypeMarshaller;
-import org.dataone.test.apache.directory.server.integ.ApacheDSSuiteRunner;
 import org.jibx.runtime.JiBXException;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 
 public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     
     public static Log log = LogFactory.getLog(NodeRegistryServiceTestUnit.class);
-    NodeRegistryService nodeRegistryService = new NodeRegistryService();
-    NodeAccess nodeAccess = new NodeAccess();
+    NodeRegistryServiceImpl nodeRegistryService = new NodeRegistryServiceImpl();
+    NodeFacade nodeAccess = new NodeFacade();
     NodeServicesAccess nodeServicesAccess = new NodeServicesAccess();
     ServiceMethodRestrictionsAccess serviceMethodRestrictionsAccess = new ServiceMethodRestrictionsAccess();
     LdapPopulationService ldapPopulationService = new LdapPopulationService();
@@ -78,29 +74,9 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     Node testCNNode;
     Node testMNNoSynchNode;
     Node testMNNoRepPolicy;
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-            int ldapTimeoutCount = 0;
-
-        if (ApacheDSSuiteRunner.getLdapServer() == null) {
-            throw new Exception("ApacheDSSuiteRunner was not automatically configured. FATAL ERROR!");
-        }
-        while (!ApacheDSSuiteRunner.getLdapServer().isStarted() && ldapTimeoutCount < 10) {
-            Thread.sleep(500L);
-            log.info("LdapServer is not yet started");
-            ldapTimeoutCount++;
-        }
-        if (!ApacheDSSuiteRunner.getLdapServer().isStarted()) {
-                throw new IllegalStateException("Service is not running");
-        }
-        final LdapContext ctx = ServerIntegrationUtils.getWiredContext(
-				ApacheDSSuiteRunner.getLdapServer(), null);
-        ctx.lookup("dc=dataone,dc=org");
-    }
-    
     
     @Before
-    public void removeAnyTestNodes() throws IOException, InstantiationException, IllegalAccessException, JiBXException, NamingException {
+    public void removeAnyTestNodes() throws IOException, InstantiationException, IllegalAccessException, JiBXException, NamingException, Exception {
         testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNode.xml");
         testCNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/cnNode.xml");
         testMNNoSynchNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeValidNoSynch.xml");
@@ -128,7 +104,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         testCNNode.setIdentifier(cnNodeReference);
         testNodeList.add(testCNNode);
         
-        Node testCNRetrieval = nodeRegistryService.getNode(cnNodeReference);
+        Node testCNRetrieval = nodeRegistryService.getNodeCapabilities(cnNodeReference);
         
         ByteArrayOutputStream outputTestCNStream = new ByteArrayOutputStream();
         TypeMarshaller.marshalTypeToOutputStream(testCNRetrieval, outputTestCNStream);
@@ -139,17 +115,6 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         for (Node node : testNodeList) {
             
             nodeAccess.setNodeApproved(node.getIdentifier(), Boolean.TRUE);
-        }
-        for (Node node : testNodeList) {
-            
-            Boolean nodeAggregateLogs = nodeAccess.getAggregateLogs(node.getIdentifier());
-            assertTrue(nodeAggregateLogs);
-            nodeAccess.setAggregateLogs(node.getIdentifier(), false);
-        }
-        for (Node node : testNodeList) {
-            
-            Boolean nodeAggregateLogs = nodeAccess.getAggregateLogs(node.getIdentifier());
-            assertFalse(nodeAggregateLogs);
         }
         try {
             NodeList nodeList = nodeRegistryService.listNodes();
@@ -192,25 +157,6 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         
         for (Node node : testNodeList) {
             
-            List<Service> services = nodeServicesAccess.getServiceList(node.getIdentifier().getValue());
-            if ((services != null) && (services.size() > 0)) {
-                for (Service service : services) {
-                    log.debug("deleteNode Service: " + service.getName());
-                    List<ServiceMethodRestriction> serviceRestrictionList = serviceMethodRestrictionsAccess.getServiceMethodRestrictionList(node.getIdentifier().getValue(), nodeServicesAccess.buildNodeServiceId(service));
-                    if (serviceRestrictionList != null) {
-                        for (ServiceMethodRestriction restriction : serviceRestrictionList) {
-                            log.debug("deleteNode deleting " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction));
-                            if (!serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(node.getIdentifier(), service, restriction)) {
-                                
-                                fail("Unable to delete restriction " + serviceMethodRestrictionsAccess.buildServiceMethodRestrictionDN(node.getIdentifier(), service, restriction));
-                            }
-                        }
-                    }
-                    if (!nodeServicesAccess.deleteNodeService(node.getIdentifier(), service)) {
-                        fail("Unable to delete service " + nodeServicesAccess.buildNodeServiceDN(node.getIdentifier(), service));
-                    }
-                }
-            }
             nodeAccess.deleteNode(node.getIdentifier());
         }
     }
@@ -234,7 +180,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     public void testUpdateNoSyncNodeWithSyncMNNode() throws Exception {
         // This should be able to register without error, that is all
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNoSynchNode);
-        Node mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        Node mnRegisteredNode = nodeRegistryService.getNodeCapabilities(mnNodeReference);
         Synchronization sync = new Synchronization();
         Schedule sched = new Schedule();
         sched.setSec("30");
@@ -250,7 +196,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         mnRegisteredNode.setSynchronization(sync);
         mnRegisteredNode.setSynchronize(true);
         nodeRegistryService.updateNodeCapabilities(mnNodeReference, mnRegisteredNode);
-        mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        mnRegisteredNode = nodeRegistryService.getNodeCapabilities(mnNodeReference);
         try {
             assertTrue(mnRegisteredNode.getSynchronization().getSchedule() != null);
             assertTrue(mnRegisteredNode.isSynchronize());
@@ -265,7 +211,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     public void testUpdateNoRepPolicyWithRepPolicyMNnode() throws Exception {
         // This should be able to register without error, that is all
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNoRepPolicy);
-        Node mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        Node mnRegisteredNode = nodeRegistryService.getNodeCapabilities(mnNodeReference);
         NodeReplicationPolicy nrp = new NodeReplicationPolicy();
         nrp.setSpaceAllocated(BigInteger.TEN);
         nrp.setMaxObjectSize(BigInteger.ONE);
@@ -289,7 +235,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         
         mnRegisteredNode.setNodeReplicationPolicy(nrp);
         nodeRegistryService.updateNodeCapabilities(mnNodeReference, mnRegisteredNode);
-        mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        mnRegisteredNode = nodeRegistryService.getNodeCapabilities(mnNodeReference);
         try {
             assertTrue(mnRegisteredNode.getNodeReplicationPolicy() != null);
             assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getMaxObjectSize().toString().equals("1"));
@@ -306,7 +252,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     public void testUpdateRepPolicyWithNewRepPolicy() throws Exception {
         // This should be able to register without error, that is all
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
-        Node mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        Node mnRegisteredNode = nodeRegistryService.getNodeCapabilities(mnNodeReference);
         NodeReplicationPolicy nrp = new NodeReplicationPolicy();
         nrp.setSpaceAllocated(BigInteger.TEN);
         nrp.setMaxObjectSize(BigInteger.ONE);
@@ -330,7 +276,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
         
         mnRegisteredNode.setNodeReplicationPolicy(nrp);
         nodeRegistryService.updateNodeCapabilities(mnNodeReference, mnRegisteredNode);
-        mnRegisteredNode = nodeRegistryService.getNode(mnNodeReference);
+        mnRegisteredNode = nodeRegistryService.getNodeCapabilities(mnNodeReference);
         try {
             assertTrue(mnRegisteredNode.getNodeReplicationPolicy() != null);
             assertTrue(mnRegisteredNode.getNodeReplicationPolicy().getMaxObjectSize().toString().equals("1"));
