@@ -66,10 +66,6 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
         this.setBase(Settings.getConfiguration().getString("nodeRegistry.ldap.base"));
     }
 
-    @Override
-    public void setBase(String base) {
-        this.base = base;
-    }
 
     /**
      * provide a nodeReference, a Service and ServiceMethodRestriction
@@ -84,9 +80,8 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @return String of DN
      * 
      */
-    public String buildServiceMethodRestrictionDN(NodeReference nodeReference, Service service, ServiceMethodRestriction restrict) {
+    protected String buildServiceMethodRestrictionDN(NodeReference nodeReference, Service service, ServiceMethodRestriction restrict) {
         String d1NodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
-//        String serviceMethodRestrictionDN = "d1ServiceMethodName=" + restrict.getMethodName() + ",d1NodeServiceId=" + d1NodeServiceId + ",cn=" + nodeReference.getValue() + ",dc=dataone,dc=org";
         return String.format("%s=%s,%s=%s,cn=%s,dc=dataone,dc=org",
         		SERVICE_METHOD_NAME, restrict.getMethodName(),
         		NodeServicesAccess.NODE_SERVICE_ID, d1NodeServiceId,
@@ -102,9 +97,9 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @return Boolean
      * 
      */
-    public Boolean deleteServiceMethodRestriction(NodeReference nodeReference, Service service, ServiceMethodRestriction restrict) {
+    protected Boolean deleteServiceMethodRestriction(DirContext ctx, NodeReference nodeReference, Service service, ServiceMethodRestriction restrict) {
 
-        return super.removeEntry(buildServiceMethodRestrictionDN(nodeReference, service, restrict));
+        return super.removeEntry(ctx, buildServiceMethodRestrictionDN(nodeReference, service, restrict));
     }
 
     /**
@@ -116,15 +111,14 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @throws ServiceFailure
      * 
      */
-    public List<ServiceMethodRestriction> getServiceMethodRestrictionList(String nodeIdentifier, String serviceIdentifier) throws ServiceFailure {
+    protected List<ServiceMethodRestriction> getServiceMethodRestrictionList(DirContext ctx, String nodeIdentifier, String serviceIdentifier) throws ServiceFailure {
         List<ServiceMethodRestriction> serviceMethodRestrictionList = new ArrayList<ServiceMethodRestriction>();
         try {
-            DirContext ctx = getContext();
             SearchControls ctls = new SearchControls();
             ctls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
             NamingEnumeration<SearchResult> results = ctx.search(
-            		this.base, 
+            		getBase(), 
             		String.format("(&(&(objectClass=%s)(%s=%s))(%s=%s))",
                     		          OBJECT_CLASS_ID, 
                     		          NodeServicesAccess.NODE_SERVICE_ID, serviceIdentifier,
@@ -169,7 +163,7 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @throws NamingException
      * 
      */
-    public ServiceMethodRestriction mapServiceMethodRestriction(HashMap<String, NamingEnumeration> attributesMap) throws NamingException {
+    protected ServiceMethodRestriction mapServiceMethodRestriction(HashMap<String, NamingEnumeration> attributesMap) throws NamingException {
         ServiceMethodRestriction serviceMethodRestriction = new ServiceMethodRestriction();
 
         serviceMethodRestriction.setMethodName(getEnumerationValueString(attributesMap.get(SERVICE_METHOD_NAME.toLowerCase())));
@@ -207,7 +201,7 @@ public class ServiceMethodRestrictionsAccess extends LDAPService {
      * @return Attributes
      * 
      */
-    public Attributes mapServiceMethodRestrictionAttributes(Node node, Service service, ServiceMethodRestriction restrict) {
+    protected Attributes mapServiceMethodRestrictionAttributes(Node node, Service service, ServiceMethodRestriction restrict) {
         Attributes serviceAttributes = new BasicAttributes();
         String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
         serviceAttributes.put(new BasicAttribute("objectclass", OBJECT_CLASS_ID));
