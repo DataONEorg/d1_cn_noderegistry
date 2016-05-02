@@ -164,7 +164,7 @@ public class NodeAccess extends LDAPService {
             log.trace("BASE: " + getBase());
             NamingEnumeration<SearchResult> results =
                     ctx.search(getBase(), "(&(objectClass=d1Node)(d1NodeApproved=TRUE))", ctls);
-
+            
             while (results != null && results.hasMore()) {
                 SearchResult si = results.next();
                 String nodeDn = si.getNameInNamespace();
@@ -181,14 +181,18 @@ public class NodeAccess extends LDAPService {
                     NamingEnumeration<?> attributeValue = attribute.getAll();
                     attributesMap.put(attributeName, attributeValue);
                 }
-
+               
+                
                 allNode.add(this.mapBasicNodeProperties(attributesMap, new Node()));
+                values.close();
+                 
             }
+            results.close();
         } catch (CommunicationException ex) {
-            ex.printStackTrace();
+            log.error(ex.getMessage(), ex);
             throw new ServiceFailure("-1", "LDAP Service is unresponsive");
         } catch (Exception e) {
-            e.printStackTrace();
+            
             log.error("Problem searching Approved Nodes for Nodelist", e);
             throw new ServiceFailure("-1", e.getMessage());
         }
