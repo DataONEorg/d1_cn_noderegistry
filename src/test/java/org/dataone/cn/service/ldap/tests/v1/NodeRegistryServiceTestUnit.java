@@ -56,7 +56,7 @@ import org.dataone.service.types.v1.ServiceMethodRestriction;
 import org.dataone.service.types.v1.Services;
 import org.dataone.service.types.v1.Synchronization;
 import org.dataone.service.util.TypeMarshaller;
-import org.jibx.runtime.JiBXException;
+import org.dataone.exceptions.MarshallingException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -76,7 +76,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     Node testMNNoRepPolicy;
     
     @Before
-    public void removeAnyTestNodes() throws IOException, InstantiationException, IllegalAccessException, JiBXException, NamingException, Exception {
+    public void removeAnyTestNodes() throws IOException, InstantiationException, IllegalAccessException, MarshallingException, NamingException, Exception {
         testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNode.xml");
         testCNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/cnNode.xml");
         testMNNoSynchNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeValidNoSynch.xml");
@@ -290,7 +290,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     }
 
     @Test(expected = InvalidRequest.class)
-    public void testRegisterBadLocalhostNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
+    public void testRegisterBadLocalhostNode() throws IOException, InstantiationException, IllegalAccessException, MarshallingException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
         Node testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnBadLocalhostNode.xml");
         
         NodeReference mnNodeReference = nodeRegistryService.register(testMNNode);
@@ -298,7 +298,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     }
 
     @Test(expected = InvalidRequest.class)
-    public void testRegisterBadNodeId() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
+    public void testRegisterBadNodeId() throws IOException, InstantiationException, IllegalAccessException, MarshallingException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
         
         Node testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnBadNodeId.xml");
         
@@ -307,7 +307,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     }
 
     @Test(expected = InvalidRequest.class)
-    public void testRegisterBadSyncNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
+    public void testRegisterBadSyncNode() throws IOException, InstantiationException, IllegalAccessException, MarshallingException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
         
         Node testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeFailOnSynchronization.xml");
         
@@ -316,7 +316,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     }    
 
     @Test(expected = InvalidRequest.class)
-    public void testRegisterBadSyncScheduleNode() throws IOException, InstantiationException, IllegalAccessException, JiBXException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
+    public void testRegisterBadSyncScheduleNode() throws IOException, InstantiationException, IllegalAccessException, MarshallingException, ServiceFailure, IdentifierNotUnique, InvalidRequest, NotImplemented {
         
         Node testMNNode = buildTestNode("/org/dataone/cn/resources/samples/v1/mnNodeFailOnSchedule.xml");
         
@@ -325,7 +325,7 @@ public class NodeRegistryServiceTestUnit extends AbstractLdapTestUnit {
     }
     
     private Node buildTestNode(String resourcePath) 
-    throws IOException, InstantiationException, IllegalAccessException, JiBXException 
+    throws IOException, InstantiationException, IllegalAccessException, MarshallingException 
     {
         ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
         InputStream is = this.getClass().getResourceAsStream(resourcePath);
