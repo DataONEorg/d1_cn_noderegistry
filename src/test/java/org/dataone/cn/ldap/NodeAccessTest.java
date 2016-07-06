@@ -22,7 +22,7 @@ import javax.naming.directory.ModificationItem;
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.Subject;
 import org.dataone.service.util.TypeMarshaller;
-import org.jibx.runtime.JiBXException;
+import org.dataone.exceptions.MarshallingException;
 import org.junit.Test;
 
 public class NodeAccessTest {
@@ -420,7 +420,7 @@ public class NodeAccessTest {
 	
 
 	
-    private Node buildTestNode(String resourcePath) throws IOException, InstantiationException, IllegalAccessException, JiBXException {
+    private Node buildTestNode(String resourcePath) throws IOException, InstantiationException, IllegalAccessException, MarshallingException {
         ByteArrayOutputStream mnNodeOutput = new ByteArrayOutputStream();
         InputStream is = this.getClass().getResourceAsStream(resourcePath);
         
