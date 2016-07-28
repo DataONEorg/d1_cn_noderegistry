@@ -862,11 +862,20 @@ public class NodeAccess extends LDAPService {
             
             /* NodeReplicationPolicy elements and attributes */
             if (node.getNodeReplicationPolicy() != null) {
-               	NodeReplicationPolicy rp = node.getNodeReplicationPolicy();
-               	
-            	modificationItemList.addAll(calcModifications(REP_POLICY_MAXOBJECTSIZE, attributesMap, rp.getMaxObjectSize().toString()));
-            	modificationItemList.addAll(calcModifications(REP_POLICY_SPACEALLOCATED, attributesMap, rp.getSpaceAllocated().toString()));
-            	modificationItemList.addAll(calcListModifications(
+                NodeReplicationPolicy rp = node.getNodeReplicationPolicy();
+                
+                modificationItemList.addAll(calcModifications(
+                        REP_POLICY_MAXOBJECTSIZE, 
+                        attributesMap, 
+                        rp.getMaxObjectSize() == null ? null : rp.getMaxObjectSize().toString()
+                        ));
+
+                modificationItemList.addAll(calcModifications(
+                        REP_POLICY_SPACEALLOCATED, 
+                        attributesMap, 
+                        rp.getSpaceAllocated() == null ? null : rp.getSpaceAllocated().toString()
+                        ));
+                modificationItemList.addAll(calcListModifications(
             			REP_POLICY_ALLOWEDNODE,
             			attributesMap, 
             			rp.getAllowedNodeList() == null ? null : CollectionUtils.collect(rp.getAllowedNodeList(),
