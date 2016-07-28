@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ import javax.naming.directory.ModificationItem;
 
 import org.dataone.service.types.v1.Node;
 import org.dataone.service.types.v1.Subject;
+import org.dataone.service.types.v2.TypeFactory;
 import org.dataone.service.util.TypeMarshaller;
 import org.dataone.exceptions.MarshallingException;
 import org.junit.Test;
@@ -418,6 +420,20 @@ public class NodeAccessTest {
 //		assertTrue("The ModItem should be contain the two new values", mods.get(0).toString().contains("louie"));
 	}
 	
+	
+	@Test
+	public void mapNodeAttributesShouldAcceptNullishNodeReplicationPolicyTest() throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, IOException, MarshallingException, NamingException {
+	    NodeAccess na = new NodeAccess();
+	    org.dataone.service.types.v2.Node node = TypeFactory.convertTypeFromType(
+	            buildTestNode("/org/dataone/cn/resources/samples/v1/mnNode.xml"),
+	                    org.dataone.service.types.v2.Node.class);
+	    node.getNodeReplicationPolicy().setMaxObjectSize(null);
+	    Attributes a = na.mapNodeAttributes(node);
+	    NamingEnumeration ne = a.getIDs();
+	    while (ne.hasMore()) {
+	        System.out.println(ne.next().toString());
+	    }
+	}
 
 	
     private Node buildTestNode(String resourcePath) throws IOException, InstantiationException, IllegalAccessException, MarshallingException {
@@ -435,4 +451,6 @@ public class NodeAccessTest {
         Node testNode = TypeMarshaller.unmarshalTypeFromStream(Node.class, bArrayInputStream);
         return testNode;
     }
+    
+    
 }
