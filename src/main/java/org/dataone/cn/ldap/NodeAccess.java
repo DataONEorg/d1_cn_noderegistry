@@ -1126,8 +1126,9 @@ public class NodeAccess extends LDAPService {
             // handle properties
             List<Property> existingNodeProperties = nodePropertyAccess.getPropertyList(ctx, nodeid.getValue());
             if ((existingNodeProperties != null) && !(existingNodeProperties.isEmpty())) {
-                for (Property removeProperty : existingNodeProperties) {                    
-                    nodePropertyAccess.deleteNodeProperty(ctx, nodeid, removeProperty);
+                for (Property removeProperty : existingNodeProperties) {
+                    if (!removeProperty.getKey().startsWith("CN_"))
+                        nodePropertyAccess.deleteNodeProperty(ctx, nodeid, removeProperty);
                 }
             }
             log.debug("(e) removed properties");
@@ -1135,10 +1136,14 @@ public class NodeAccess extends LDAPService {
             // add in the properties
             if ((node.getPropertyList() != null) && (node.getPropertyList().size() > 0)) {
                 for (Property property : node.getPropertyList()) {
-                    String propertyDN = nodePropertyAccess.buildNodePropertyDN(node.getIdentifier(), property);
-                    Attributes propertyAttributes = nodePropertyAccess.mapNodePropertyAttributes(node, property);
-                    ctx.createSubcontext(propertyDN, propertyAttributes);
-                    log.debug("Added Node Property entry " + propertyDN);
+                    if (!property.getKey().startsWith("CN_")) {
+                        String propertyDN = nodePropertyAccess.buildNodePropertyDN(node.getIdentifier(), property);
+                        Attributes propertyAttributes = nodePropertyAccess.mapNodePropertyAttributes(node, property);
+                        ctx.createSubcontext(propertyDN, propertyAttributes);
+                        log.debug("Added Node Property entry " + propertyDN);
+                    } else {
+                        log.debug("Skipped Node Property entry with CN_ prefix: " + property.getKey());
+                    }
                 }
             }
             log.debug("(f) re-added properties");
