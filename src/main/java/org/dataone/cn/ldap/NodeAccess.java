@@ -1071,10 +1071,10 @@ public class NodeAccess extends LDAPService {
     protected void updateNode(DirContext ctx, Node node) throws NotImplemented, ServiceFailure, InvalidRequest, NotFound {
 
         try {
-            log.debug("(a) updateNode being called");
-
-
             NodeReference nodeid = node.getIdentifier();
+
+            log.info("Updating Node " + nodeid + " ...");
+
             HashMap<String, NamingEnumeration<?>> attributesMap = buildNodeAttributeMap(ctx, nodeid);
             List<ModificationItem> modificationItemList = mapNodeModificationItemList(attributesMap, node);
             for (ModificationItem item: modificationItemList) {
@@ -1086,7 +1086,7 @@ public class NodeAccess extends LDAPService {
             modificationArray = modificationItemList.toArray(modificationArray);
             ctx.modifyAttributes(buildNodeDN(nodeid), modificationArray);
             
-            log.debug("(b) modified using attributesMap");
+            log.debug("(a) modified using attributesMap");
 
             // easiest to remove existingServices and then adding the new ones back
             List<Service> existingNodeServices = nodeServicesAccess.getServiceList(ctx, nodeid.getValue());
@@ -1102,7 +1102,7 @@ public class NodeAccess extends LDAPService {
                     nodeServicesAccess.deleteNodeService(ctx, nodeid, removeService);
                 }
             }
-            log.debug("(c) removed services");
+            log.debug("(b) removed existing services and service restrictions");
 
             // add in the services
             if ((node.getServices() != null) && (node.getServices().sizeServiceList() > 0)) {
@@ -1121,29 +1121,34 @@ public class NodeAccess extends LDAPService {
                     }
                 }
             }
-            log.debug("(d) re-added services");
+            log.debug("(c) added the updated services and service restrictions");
 
             // handle properties
             List<Property> existingNodeProperties = nodePropertyAccess.getPropertyList(ctx, nodeid.getValue());
             if ((existingNodeProperties != null) && !(existingNodeProperties.isEmpty())) {
-                for (Property removeProperty : existingNodeProperties) {                    
-                    nodePropertyAccess.deleteNodeProperty(ctx, nodeid, removeProperty);
+                for (Property removeProperty : existingNodeProperties) {
+                    if (!removeProperty.getKey().startsWith("CN_"))
+                        nodePropertyAccess.deleteNodeProperty(ctx, nodeid, removeProperty);
                 }
             }
-            log.debug("(e) removed properties");
+            log.debug("(d) removed existing properties (except CN-controlled)");
 
             // add in the properties
             if ((node.getPropertyList() != null) && (node.getPropertyList().size() > 0)) {
                 for (Property property : node.getPropertyList()) {
-                    String propertyDN = nodePropertyAccess.buildNodePropertyDN(node.getIdentifier(), property);
-                    Attributes propertyAttributes = nodePropertyAccess.mapNodePropertyAttributes(node, property);
-                    ctx.createSubcontext(propertyDN, propertyAttributes);
-                    log.debug("Added Node Property entry " + propertyDN);
+                    if (!property.getKey().startsWith("CN_")) {
+                        String propertyDN = nodePropertyAccess.buildNodePropertyDN(node.getIdentifier(), property);
+                        Attributes propertyAttributes = nodePropertyAccess.mapNodePropertyAttributes(node, property);
+                        ctx.createSubcontext(propertyDN, propertyAttributes);
+                        log.debug("...Added Node Property entry " + propertyDN);
+                    } else {
+                        log.debug("...Skipped Node Property entry with reserved 'CN_' prefix: " + property.getKey());
+                    }
                 }
             }
-            log.debug("(f) re-added properties");
+            log.debug("(e) added the updated properties");
 
-            log.debug("Updated NodeCapabilities Node: " + nodeid.getValue());
+            log.info("Updated NodeCapabilities Node: " + nodeid.getValue());
         } catch (NamingException ex) {
             ex.printStackTrace();
             throw new ServiceFailure("0", "updateNodeCapabilities failed due to LDAP communication failure:: " + 
