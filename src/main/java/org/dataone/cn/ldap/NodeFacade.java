@@ -68,22 +68,26 @@ public class NodeFacade {
         try {
             nodeList = new NodeList();
             List<Node> allNodes = nodeAccess.getApprovedNodeList(dirContext);
-            log.debug("found " + allNodes.size() + " nodes");
+            if (log.isDebugEnabled())
+                    log.debug("found " + allNodes.size() + " nodes");
             for (Node node : allNodes) {
 
                 String nodeIdentifier = node.getIdentifier().getValue();
-                log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL());
+                if (log.isTraceEnabled())
+                    log.trace(nodeIdentifier + " " + node.getName() + " " + node.getBaseURL());
                 List<Service> serviceList = nodeServicesAccess.getServiceList(dirContext, nodeIdentifier);
                 if (!serviceList.isEmpty()) {
                     for (Service service : serviceList) {
                         String nodeServiceId = nodeServicesAccess.buildNodeServiceId(service);
 
-                        log.trace("\t has service " + nodeServiceId);
+                        if (log.isTraceEnabled()) 
+                            log.trace("\t has service " + nodeServiceId);
                         List<ServiceMethodRestriction> restrictionList = serviceMethodRestrictionsAccess
                                 .getServiceMethodRestrictionList(dirContext, nodeIdentifier, nodeServiceId);
-                        for (ServiceMethodRestriction restrict : restrictionList) {
-                            log.trace("\t\t has restriction" + restrict.getMethodName());
-                        }
+                        if (log.isTraceEnabled())
+                            for (ServiceMethodRestriction restrict : restrictionList) {
+                                log.trace("\t\t has restriction" + restrict.getMethodName());
+                            }
                         service.setRestrictionList(restrictionList);
                     }
                     Services services = new Services();
@@ -159,7 +163,8 @@ public class NodeFacade {
                 throw new ServiceFailure("4824", ex.getMessage());
             }
 
-            log.debug(nodeReference.getValue() + " " + node.getName() + " " + node.getBaseURL() + " "
+            if (log.isDebugEnabled())
+                log.debug(nodeReference.getValue() + " " + node.getName() + " " + node.getBaseURL() + " "
                     + node.getBaseURL());
             List<Service> serviceList = nodeServicesAccess.getServiceList(dirContext, nodeReference.getValue());
             if (!serviceList.isEmpty()) {
@@ -279,16 +284,18 @@ public class NodeFacade {
                 List<Service> services = nodeServicesAccess.getServiceList(dirContext, nodeReference.getValue());
                 if ((services != null) && (services.size() > 0)) {
                     for (Service service : services) {
-                        log.debug("deleteNode Service: " + service.getName());
+                        if (log.isDebugEnabled())
+                            log.debug("deleteNode Service: " + service.getName());
                         List<ServiceMethodRestriction> serviceRestrictionList = serviceMethodRestrictionsAccess
                                 .getServiceMethodRestrictionList(dirContext, nodeReference.getValue(),
                                         nodeServicesAccess.buildNodeServiceId(service));
                         if (serviceRestrictionList != null) {
                             for (ServiceMethodRestriction restriction : serviceRestrictionList) {
-                                log.debug("deleteNode deleting "
-                                        + serviceMethodRestrictionsAccess
-                                        .buildServiceMethodRestrictionDN(nodeReference,
-                                                service, restriction));
+                                
+                                if (log.isDebugEnabled())
+                                    log.debug("deleteNode deleting " + serviceMethodRestrictionsAccess
+                                        .buildServiceMethodRestrictionDN(nodeReference, service, restriction));
+                                
                                 if (!serviceMethodRestrictionsAccess.deleteServiceMethodRestriction(dirContext,
                                         nodeReference, service, restriction)) {
 
